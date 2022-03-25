@@ -3,13 +3,13 @@
  * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
  */
 export class Result<A, E> {
-    private constructor(private val?: A, private err?: E) {}
+    private constructor(private readonly val?: A, private readonly err?: E) {}
 
     /**
      * `ok: A -> Result<A, E>`
      *
      * ---
-     * Creates a `Result<A, E>` that represents a success.
+     * @returns a `Result<A, E>` that represents a success.
      * @example
      * const x = Result.ok(3);
      *
@@ -24,7 +24,7 @@ export class Result<A, E> {
      * `err: E -> Result<A, E>`
      *
      * ---
-     * Creates a `Result<A, E>` that represents an error.
+     * @returns a `Result<A, E>` that represents an error.
      * @example
      * const x = Result.err("oops");
      *
@@ -67,10 +67,30 @@ export class Result<A, E> {
         return !(this.err == null);
     }
 
+    /**
+     * `this: Result<A, E>`
+     *
+     * `unwrap: () -> A`
+     *
+     * ---
+     * @returns the contained Ok value.
+     * @throws if `Result<A, E>` is an Err.
+     * @example
+     * const x = Ok(1);
+     * expect(x.unwrap()).toEqual(1);
+     *
+     * const y = Err("oops");
+     * expect(() => y.unwrap()).toThrow(new Error("oops"));
+     */
     unwrap(): A {
         if (this.isOk()) return this.val!;
 
-        throw new Error(`${this.err}`);
+        const msg =
+            typeof this.err === "string"
+                ? this.err
+                : JSON.stringify(this.err, undefined, 2);
+
+        throw new Error(msg);
     }
 }
 
