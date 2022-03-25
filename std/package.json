@@ -1,0 +1,5 @@
+{
+  "name": "@hobnail/std",
+  "version": "0.0.0",
+  "description": "A standard library to be the foundation of the @hobnail libs."
+}

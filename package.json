@@ -1,0 +1,15 @@
+{
+  "name": "@hobnail/overture",
+  "version": "1.0.0",
+  "private": "true",
+  "workspaces": [
+    "std"
+  ],
+  "dependencies": {
+    "@changesets/changelog-github": "^0.4.3",
+    "@changesets/cli": "^2.21.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.6.3"
+  }
+}
