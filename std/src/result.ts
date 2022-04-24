@@ -3,7 +3,16 @@
  * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
  */
 export class Result<A, E> {
-    private constructor(private readonly val?: A, private readonly err?: E) {}
+    private constructor(
+        /**
+         * The raw `Ok` value inside the `Result<A, E>`.
+         */
+        readonly val?: A,
+        /**
+         * The raw `Err` value, inside the `Result<A, E>`.
+         */
+        readonly err?: E
+    ) {}
 
     /**
      * `ok: A -> Result<A, E>`
@@ -33,6 +42,10 @@ export class Result<A, E> {
      */
     static err<A = never, E = never>(error: E): Result<A, E> {
         return new Result(undefined, error) as any;
+    }
+
+    *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
+        return yield this;
     }
 
     /**
@@ -65,23 +78,6 @@ export class Result<A, E> {
     isErr(): boolean {
         // Double equality used here since it treats null and undefined the same.
         return !(this.err == null);
-    }
-
-    /**
-     * @returns the raw value contained inside the `Result<A, E>`.
-     * @example
-     * const x: Result<number, string> = Ok(5);
-     * const a: number | string = x.raw();
-     * expect(a).toEqual(5);
-     *
-     * const y: Result<number, string> = Err("oops");
-     * const b: number | string = y.raw();
-     * expect(b).toEqual("oops");
-     */
-    raw(): A | E {
-        if (this.isOk()) return this.val!;
-
-        return this.err!;
     }
 
     /**
@@ -209,3 +205,23 @@ export const Ok = Result.ok;
  * expect(x.isErr()).toBe(true)
  */
 export const Err = Result.err;
+
+export const result = <A, E, B, R extends Result<A, E>>(
+    genFn: () => Generator<R, B, A>
+): Result<B, NonNullable<R["err"]>> => {
+    const iterator = genFn();
+    let state = iterator.next();
+
+    function run(
+        state: IteratorYieldResult<R> | IteratorReturnResult<B>
+    ): Result<B, R["err"]> {
+        if (state.done) {
+            return Ok(state.value);
+        }
+
+        const { value } = state;
+        return value.andThen(val => run(iterator.next(val)));
+    }
+
+    return run(state) as any;
+};

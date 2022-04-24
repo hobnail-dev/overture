@@ -10,7 +10,8 @@
     "rules": {
         "simple-import-sort/imports": "error",
         "simple-import-sort/exports": "error",
-        "react/jsx-filename-extension": "off"
+        "react/jsx-filename-extension": "off",
+        "@typescript-eslint/no-shadow": "off"
     },
     "extends": ["airbnb-typescript", "plugin:prettier/recommended"],
     "parserOptions": {
