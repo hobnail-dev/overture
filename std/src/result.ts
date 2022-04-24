@@ -68,6 +68,23 @@ export class Result<A, E> {
     }
 
     /**
+     * @returns the raw value contained inside the `Result<A, E>`.
+     * @example
+     * const x: Result<number, string> = Ok(5);
+     * const a: number | string = x.raw();
+     * expect(a).toEqual(5);
+     *
+     * const y: Result<number, string> = Err("oops");
+     * const b: number | string = y.raw();
+     * expect(b).toEqual("oops");
+     */
+    raw(): A | E {
+        if (this.isOk()) return this.val!;
+
+        return this.err!;
+    }
+
+    /**
      * `this: Result<A, E>`
      *
      * `unwrap: () -> A`
@@ -91,6 +108,31 @@ export class Result<A, E> {
                 : JSON.stringify(this.err, undefined, 2);
 
         throw new Error(msg);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `map: (A -> B) -> Result<B, E>`
+     *
+     * ---
+     * Evaluates the given function against the `A` value of `Result<A, E>` if it is `Ok`.
+     * @param fn mapping function.
+     * @returns The resulting value of the mapping function wrapped in a `Result`.
+     * @example
+     * const x = Ok(5).map(x => x * 2);
+     * expect(x.unwrap()).toEqual(10);
+     *
+     * const y = Err("oops").map(x => x * 2);
+     * expect(() => y.unwrap()).toThrow();
+     * expect(y.unwrapErr()).toEqual("oops");
+     */
+    map<B>(fn: (a: A) => B): Result<B, E> {
+        if (this.isOk()) {
+            return Result.ok(fn(this.val!));
+        }
+
+        return this as any;
     }
 }
 

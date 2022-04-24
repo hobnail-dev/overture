@@ -45,6 +45,15 @@ describe("Result", () => {
         });
     });
 
+    describe(".raw", () => {
+        it("Returns the raw value inside a Result, be it Ok or Err", () => {
+            const res1 = Result.ok(1);
+            expect(res1.raw()).toEqual(1);
+            const res2 = Result.err(false);
+            expect(res2.raw()).toEqual(false);
+        });
+    });
+
     describe(".unwrap", () => {
         it("Returns the value of the Result when it is Ok", () => {
             const res = Ok(1);
@@ -54,6 +63,18 @@ describe("Result", () => {
         it("Throws an Error with the value when Result is not Ok", () => {
             const res = Err("oops");
             expect(() => res.unwrap()).toThrow(new Error("oops"));
+        });
+    });
+
+    describe(".map()", () => {
+        it("Executes a function against the value of the Result when it is Ok", () => {
+            const res = Result.ok(1).map(x => x * 2);
+            expect(res.raw()).toEqual(2);
+        });
+
+        it("Does nothing when the Result is Err", () => {
+            const res = Result.err<number, string>("oops").map(x => x * 2);
+            expect(res.raw()).toEqual("oops");
         });
     });
 });
