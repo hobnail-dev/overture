@@ -66,7 +66,19 @@ describe("Result", () => {
         });
     });
 
-    describe(".map()", () => {
+    describe(".unwrapErr", () => {
+        it("Returns the Err of the Result when it is Err", () => {
+            const res = Result.err(1);
+            expect(res.unwrapErr()).toEqual(1);
+        });
+
+        it("Throws an Error when Result is Ok", () => {
+            const res = Result.ok("hello");
+            expect(() => res.unwrapErr()).toThrow();
+        });
+    });
+
+    describe(".map", () => {
         it("Executes a function against the value of the Result when it is Ok", () => {
             const res = Result.ok(1).map(x => x * 2);
             expect(res.raw()).toEqual(2);

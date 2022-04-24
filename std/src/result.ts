@@ -113,6 +113,29 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `unwrapErr: () -> E`
+     *
+     * ---
+     * @returns the `Err` value contained inside the `Result<A, E>`.
+     * @throws an Error if the `Result<A, E>` is `Ok`.
+     * @example
+     * const x = Err("oops");
+     * expect(x.unwrapErr()).toEqual("oops");
+     *
+     * const y = Ok(5);
+     * expect (() => y.unwrapErr).toThrow();
+     */
+    unwrapErr(): E {
+        if (this.isOk()) {
+            throw new Error("Could not extract error from Result.");
+        }
+
+        return this.err!;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `map: (A -> B) -> Result<B, E>`
      *
      * ---
