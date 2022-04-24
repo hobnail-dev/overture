@@ -94,5 +94,28 @@ export class Result<A, E> {
     }
 }
 
+/**
+ * `Ok: A -> Result<A, E>`
+ *
+ * ---
+ * @returns a `Result<A, E>` that represents a success.
+ * @example
+ * const x = Ok(3);
+ *
+ * expect(x).toBeInstanceOf(Result);
+ * expect(x.isOk()).toBe(true)
+ */
 export const Ok = Result.ok;
+
+/**
+ * `Err: E -> Result<A, E>`
+ *
+ * ---
+ * @returns a `Result<A, E>` that represents an error.
+ * @example
+ * const x = Err("oops");
+ *
+ * expect(x).toBeInstanceOf(Result);
+ * expect(x.isErr()).toBe(true)
+ */
 export const Err = Result.err;

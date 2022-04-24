@@ -3,6 +3,7 @@
  */
 export class Option<A> {
     private constructor(private readonly val?: A) {}
+
     /**
      * `from: A? -> Option<A>`
      *
@@ -102,5 +103,25 @@ export class Option<A> {
     }
 }
 
+/**
+ * `Some: A -> Option<A>`
+ *
+ * ---
+ * @returns an `Option<A>` that is Some, from a value that is not null or undefined.
+ * @example
+ * const x = Some(3);
+ *
+ * expect(x).toBeInstanceOf(Option);
+ * expect(x.isSome()).toBe(true)
+ */
 export const Some = Option.some;
+
+/**
+ * @returns an `Option<never>` that is None.
+ * @example
+ * const x = None;
+ *
+ * expect(x).toBeInstanceOf(Option);
+ * expect(x.isNone()).toBe(true)
+ */
 export const None = Option.none;
