@@ -1,3 +1,4 @@
+import { None, Some } from "./option";
 import { Err, Ok, Result, result } from "./result";
 
 describe("Result", () => {
@@ -96,6 +97,21 @@ describe("Result", () => {
             const error = { type: "coolErr", msg: "oh no!" };
             const res = Ok<number, string>(1).andThen(() => Err(error));
             expect(res.err).toEqual(error);
+        });
+    });
+
+    describe(".collectOption", () => {
+        it("Executes an Option returning function against the value of the Result when it is Ok, returning the Option with it's value wrapped in a Result", () => {
+            const a = Ok(1).collectOption(x => Some(x * 2));
+            expect(a.val!.val).toEqual(2);
+
+            const b = Ok(1).collectOption(() => None);
+            expect(b.isNone()).toBe(true);
+        });
+
+        it("Returns Some Err when the Result is an Err", () => {
+            const res = Err("oops").collectOption(x => Some(x * 2));
+            expect(res.val!.isErr()).toBe(true);
         });
     });
 

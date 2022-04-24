@@ -1,3 +1,5 @@
+import { Option } from "./option";
+
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
  * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
@@ -177,6 +179,21 @@ export class Result<A, E> {
         }
 
         return this as any;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `collectOption: (A -> Option<B>) -> Option<Result<B, E>>`
+     *
+     * ---
+     */
+    collectOption<B>(fn: (a: A) => Option<B>): Option<Result<B, E>> {
+        if (this.isErr()) {
+            return Option.from(Result.err(this.err!));
+        }
+
+        return fn(this.val!).map(Result.ok);
     }
 }
 
