@@ -100,6 +100,21 @@ describe("Result", () => {
         });
     });
 
+    describe(".match", () => {
+        const okFn = (n: number) => n.toString();
+        const id = <A>(x: A) => x;
+
+        it("returns the value from okFn if is Ok", () => {
+            const res = Ok(1).match(okFn, id);
+            expect(res).toEqual("1");
+        });
+
+        it("returns the value from errFn if is Err", () => {
+            const res = Err("oh no").match(okFn, id);
+            expect(res).toEqual("oh no");
+        });
+    });
+
     describe(".collectOption", () => {
         it("Executes an Option returning function against the value of the Result when it is Ok, returning the Option with it's value wrapped in a Result", () => {
             const a = Ok(1).collectOption(x => Some(x * 2));

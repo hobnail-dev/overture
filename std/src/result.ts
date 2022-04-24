@@ -184,6 +184,24 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `match: ((A -> B), (E -> B)) -> B`
+     *
+     * ---
+     * @param okFn function to be executed if `Result<A, E>` is `Ok`.
+     * @param errFn function to be executed if `Result<A, E>` is `Err`.
+     * @returns the result of `okFn` or `errFn`.
+     */
+    match<B>(okFn: (a: A) => B, errFn: (b: E) => B): B {
+        if (this.isOk()) {
+            return okFn(this.val!);
+        }
+
+        return errFn(this.err!);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `collectOption: (A -> Option<B>) -> Option<Result<B, E>>`
      *
      * ---
