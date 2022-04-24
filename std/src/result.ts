@@ -157,6 +157,31 @@ export class Result<A, E> {
 
         return this as any;
     }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `andThen: (A -> Result<B, F>) -> Result<B, E | F>`
+     *
+     * ---
+     * Evaluates the given function against the `Ok` value of `Result<A, E>` if it is `Ok`.
+     * @param fn binder function.
+     * @returns The resulting value of the binder function if the Result was `Ok`.
+     * @example
+     * const x = Ok(5).andThen(x => Ok(x * 2));
+     * expect(x.unwrap()).toEqual(10);
+     *
+     * const y = Err("oops").andThen(x => Ok(x * 2));
+     * expect(() => y.unwrap()).toThrow();
+     * expect(y.unwrapErr()).toEqual("oops");
+     */
+    andThen<B, F>(fn: (a: A) => Result<B, F>): Result<B, E | F> {
+        if (this.isOk()) {
+            return fn(this.val!);
+        }
+
+        return this as any;
+    }
 }
 
 /**

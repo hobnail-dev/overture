@@ -47,9 +47,9 @@ describe("Result", () => {
 
     describe(".raw", () => {
         it("Returns the raw value inside a Result, be it Ok or Err", () => {
-            const res1 = Result.ok(1);
+            const res1 = Ok(1);
             expect(res1.raw()).toEqual(1);
-            const res2 = Result.err(false);
+            const res2 = Err(false);
             expect(res2.raw()).toEqual(false);
         });
     });
@@ -68,25 +68,43 @@ describe("Result", () => {
 
     describe(".unwrapErr", () => {
         it("Returns the Err of the Result when it is Err", () => {
-            const res = Result.err(1);
+            const res = Err(1);
             expect(res.unwrapErr()).toEqual(1);
         });
 
         it("Throws an Error when Result is Ok", () => {
-            const res = Result.ok("hello");
+            const res = Ok("hello");
             expect(() => res.unwrapErr()).toThrow();
         });
     });
 
     describe(".map", () => {
         it("Executes a function against the value of the Result when it is Ok", () => {
-            const res = Result.ok(1).map(x => x * 2);
+            const res = Ok(1).map(x => x * 2);
             expect(res.raw()).toEqual(2);
         });
 
         it("Does nothing when the Result is Err", () => {
-            const res = Result.err<number, string>("oops").map(x => x * 2);
+            const res = Err<number, string>("oops").map(x => x * 2);
             expect(res.raw()).toEqual("oops");
+        });
+    });
+
+    describe(".andThen()", () => {
+        it("Executes a Result returning function against the value of the Result when it is Ok, returning a flattened Result", () => {
+            const res = Ok(1).andThen(x => Ok(x * 2));
+            expect(res.raw()).toEqual(2);
+        });
+
+        it("Does nothing when the Result is Err", () => {
+            const res = Err<number, string>("oops").andThen(x => Ok(x * 2));
+            expect(res.raw()).toEqual("oops");
+        });
+
+        it("Returns the err of the Result from the binding function", () => {
+            const error = { type: "coolErr", msg: "oh no!" };
+            const res = Ok<number, string>(1).andThen(() => Err(error));
+            expect(res.raw()).toEqual(error);
         });
     });
 });
