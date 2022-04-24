@@ -115,7 +115,7 @@ describe("Result", () => {
         });
     });
 
-    describe(".to()", () => {
+    describe(".to", () => {
         it("pipes the Result instance to a function", () => {
             const res = Ok(1).to(x => x.val);
             expect(res).toEqual(1);
@@ -134,6 +134,59 @@ describe("Result", () => {
         it("Returns Some Err when the Result is an Err", () => {
             const res = Err("oops").collectOption(x => Some(x * 2));
             expect(res.val!.isErr()).toBe(true);
+        });
+    });
+
+    describe(".collectPromise", () => {
+        it("Executes a Promise returning function against the value of the Result when it is Ok, returning the Promise with it's value wrapped in a Result", async () => {
+            const a = await Ok(1).collectPromise(x => Promise.resolve(x * 2));
+            expect(a.val).toEqual(2);
+        });
+
+        it("Wraps the Result in a Promise when it is an Err", async () => {
+            const res = await Err("oops").collectPromise(x =>
+                Promise.resolve(x * 2)
+            );
+
+            expect(res.err).toEqual("oops");
+        });
+    });
+
+    describe("::tranposeOption", () => {
+        it("Flips a Result<Option<A>, E> into an Option<Result<A, E>>", () => {
+            const a = Ok(1)
+                .map(x => Some(x * 2))
+                .to(Result.transposeOption);
+
+            expect(a.val!.val).toEqual(2);
+
+            const b = Ok(1)
+                .map(() => None)
+                .to(Result.transposeOption);
+
+            expect(b.isNone()).toBe(true);
+
+            const res = Err("oops")
+                .map(x => Some(x * 2))
+                .to(Result.transposeOption);
+
+            expect(res.val!.isErr()).toBe(true);
+        });
+    });
+
+    describe("::tranposePromise", () => {
+        it("Flips a Result<Promise<A>, E> into a Promise<Result<A, E>>", async () => {
+            const a = await Ok(1)
+                .map(x => Promise.resolve(x * 2))
+                .to(Result.transposePromise);
+
+            expect(a.val).toEqual(2);
+
+            const res = await Err("oops")
+                .map(x => Promise.resolve(x * 2))
+                .to(Result.transposePromise);
+
+            expect(res.err).toEqual("oops");
         });
     });
 

@@ -230,13 +230,37 @@ export class Result<A, E> {
     }
 
     /**
-     * `sequenceOption: Result<Option<A>, E> -> Option<Result<A, E>>`
+     * `this: Result<A, E>`
+     *
+     * `collectPromise: (A -> Promise<B>) -> Promise<Result<B, E>>`
+     *
+     * ---
+     */
+    collectPromise<B>(fn: (a: A) => Promise<B>): Promise<Result<B, E>> {
+        if (this.isErr()) {
+            return Promise.resolve(Result.err(this.err!));
+        }
+
+        return fn(this.val!).then(Result.ok);
+    }
+
+    /**
+     * `transposeOption: Result<Option<A>, E> -> Option<Result<A, E>>`
      *
      * ---
      */
     static transposeOption = <A, E>(
         ro: Result<Option<A>, E>
     ): Option<Result<A, E>> => ro.collectOption(x => x);
+
+    /**
+     * `transposePromise: Result<Promise<A>, E> -> Promise<Result<A, E>>`
+     *
+     * ---
+     */
+    static transposePromise = <A, E>(
+        ro: Result<Promise<A>, E>
+    ): Promise<Result<A, E>> => ro.collectPromise(x => x);
 }
 
 /**
