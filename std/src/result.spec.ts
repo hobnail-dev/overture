@@ -152,6 +152,19 @@ describe("Result", () => {
         });
     });
 
+    describe(".collectArray", () => {
+        it("Executes an Array returning function against the value of the Result when it is Ok, returning the Array with it's values wrapped in a Result", () => {
+            const a = Ok(1).collectArray(x => [x]);
+            expect(a[0]!.val).toEqual(1);
+        });
+
+        it("Wraps the Err value in an Array if the Result is an Err", () => {
+            const res = Err("oops").collectArray(x => [x]);
+
+            expect(res[0]!.err).toEqual("oops");
+        });
+    });
+
     describe("::tranposeOption", () => {
         it("Flips a Result<Option<A>, E> into an Option<Result<A, E>>", () => {
             const a = Ok(1)
@@ -174,7 +187,7 @@ describe("Result", () => {
         });
     });
 
-    describe("::tranposePromise", () => {
+    describe("::transposePromise", () => {
         it("Flips a Result<Promise<A>, E> into a Promise<Result<A, E>>", async () => {
             const a = await Ok(1)
                 .map(x => Promise.resolve(x * 2))
@@ -187,6 +200,22 @@ describe("Result", () => {
                 .to(Result.transposePromise);
 
             expect(res.err).toEqual("oops");
+        });
+    });
+
+    describe("::transposeArray", () => {
+        it("Flips a Result<Array<A>, E> into an Array<Result<A, E>>", () => {
+            const a = Ok(1)
+                .map(x => [x * 2])
+                .to(Result.transposeArray);
+
+            expect(a[0]!.val).toEqual(2);
+
+            const res = Err("oops")
+                .map(x => [x * 2])
+                .to(Result.transposeArray);
+
+            expect(res[0]!.err).toEqual("oops");
         });
     });
 

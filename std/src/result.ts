@@ -245,6 +245,21 @@ export class Result<A, E> {
     }
 
     /**
+     * `this: Result<A, E>`
+     *
+     * `collectArray: (A -> Array<B>) -> Array<Result<B, E>>`
+     *
+     * ---
+     */
+    collectArray<B>(fn: (a: A) => Array<B>): Array<Result<B, E>> {
+        if (this.isErr()) {
+            return [Result.err(this.err!)];
+        }
+
+        return fn(this.val!).map(Result.ok);
+    }
+
+    /**
      * `transposeOption: Result<Option<A>, E> -> Option<Result<A, E>>`
      *
      * ---
@@ -261,6 +276,15 @@ export class Result<A, E> {
     static transposePromise = <A, E>(
         ro: Result<Promise<A>, E>
     ): Promise<Result<A, E>> => ro.collectPromise(x => x);
+
+    /**
+     * `transposeArray: Result<Array<A>, E> -> Array<Result<A, E>>`
+     *
+     * ---
+     */
+    static transposeArray = <A, E>(
+        ro: Result<Array<A>, E>
+    ): Array<Result<A, E>> => ro.collectArray(x => x);
 }
 
 /**
