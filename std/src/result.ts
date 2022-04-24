@@ -228,6 +228,15 @@ export class Result<A, E> {
 
         return fn(this.val!).map(Result.ok);
     }
+
+    /**
+     * `sequenceOption: Result<Option<A>, E> -> Option<Result<A, E>>`
+     *
+     * ---
+     */
+    static transposeOption = <A, E>(
+        ro: Result<Option<A>, E>
+    ): Option<Result<A, E>> => ro.collectOption(x => x);
 }
 
 /**
