@@ -202,6 +202,21 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `to: (Result<A, E> -> B) -> B`
+     *
+     * ---
+     * Pipes this current `Result` instance as an argument to the given function.
+     * @example
+     * const a = Ok("3").to(x => Number(x.unwrap()));
+     * expect(a).toEqual(3);
+     */
+    to<B>(fn: (a: Result<A, E>) => B): B {
+        return fn(this);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `collectOption: (A -> Option<B>) -> Option<Result<B, E>>`
      *
      * ---

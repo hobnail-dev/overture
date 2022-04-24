@@ -115,6 +115,13 @@ describe("Result", () => {
         });
     });
 
+    describe(".to()", () => {
+        it("pipes the Result instance to a function", () => {
+            const res = Ok(1).to(x => x.val);
+            expect(res).toEqual(1);
+        });
+    });
+
     describe(".collectOption", () => {
         it("Executes an Option returning function against the value of the Result when it is Ok, returning the Option with it's value wrapped in a Result", () => {
             const a = Ok(1).collectOption(x => Some(x * 2));
