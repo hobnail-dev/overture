@@ -2,7 +2,7 @@
  * The type `Option<A>` represents an optional value: every `Option<A>` is either Some and contains a value of type `A`, or None, and does not.
  */
 export class Option<A> {
-    private constructor(private readonly val?: A) {}
+    private constructor(readonly val?: A) {}
 
     /**
      * `from: A? -> Option<A>`
@@ -100,6 +100,31 @@ export class Option<A> {
         if (this.isSome()) return this.val!;
 
         throw new Error("Could not unwrap Option.");
+    }
+
+    /**
+     * `this: Option<A>`
+     *
+     * `map: (A -> B) -> Option<B>`
+     *
+     * ---
+     * Evaluates the given function against the value of `Option<A>` if the `Option` is `Some`.
+     * @param fn mapping function.
+     * @returns The resulting value of the mapping function wrapped in an `Option`.
+     * @example
+     * const a = Some(5).map(x => x * 2);
+     * expect(a.unwrap()).toEqual(10);
+     *
+     * const b = None.map(x => x * 2);
+     * expect(() => b.unwrap()).toThrow();
+     * expect(b.isNone()).toEqual(true);
+     */
+    map<B>(fn: (a: A) => B): Option<B> {
+        if (this.isSome()) {
+            return Option.from(fn(this.val!));
+        }
+
+        return Option.none;
     }
 }
 

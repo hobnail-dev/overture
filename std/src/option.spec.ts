@@ -1,4 +1,4 @@
-import { None, Some, Option } from "./option";
+import { None, Option, Some } from "./option";
 
 describe("Option", () => {
     describe("::some", () => {
@@ -56,6 +56,18 @@ describe("Option", () => {
             expect(() => res.unwrap()).toThrow(
                 new Error("Could not unwrap Option.")
             );
+        });
+    });
+
+    describe(".map()", () => {
+        it("applies the mapping fn on the value inside the Option if it is Some", () => {
+            const a = Some(5).map(x => x * 2);
+            expect(a.val).toEqual(10);
+        });
+
+        it("does nothing if the Option is None", () => {
+            const b = None.map(x => x * 2);
+            expect(b.val).toBeUndefined();
         });
     });
 });
