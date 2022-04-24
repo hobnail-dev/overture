@@ -11,7 +11,8 @@
         "simple-import-sort/imports": "error",
         "simple-import-sort/exports": "error",
         "react/jsx-filename-extension": "off",
-        "@typescript-eslint/no-shadow": "off"
+        "@typescript-eslint/no-shadow": "off",
+        "@typescript-eslint/no-redeclare": "off"
     },
     "extends": ["airbnb-typescript", "plugin:prettier/recommended"],
     "parserOptions": {

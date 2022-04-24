@@ -59,7 +59,7 @@ describe("Option", () => {
         });
     });
 
-    describe(".map()", () => {
+    describe(".map", () => {
         it("applies the mapping fn on the value inside the Option if it is Some", () => {
             const a = Some(5).map(x => x * 2);
             expect(a.val).toEqual(10);
