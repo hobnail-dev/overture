@@ -66,7 +66,35 @@ describe("Result", () => {
 
         it("Throws an Error when Result is Ok", () => {
             const res = Ok("hello");
-            expect(() => res.unwrapErr()).toThrow();
+            expect(() => res.unwrapErr()).toThrow(
+                new Error("Could not extract error from Result: hello")
+            );
+        });
+    });
+
+    describe(".expect", () => {
+        it("Returns the value of the Result when it is Ok", () => {
+            const res = Ok(1);
+            expect(res.expect("oh no")).toEqual(1);
+        });
+
+        it("Throws an Error with the Err value and arg message when Result is not Ok", () => {
+            const res = Err("oops");
+            expect(() => res.expect("oh no")).toThrow(new Error("oh no: oops"));
+        });
+    });
+
+    describe(".expectErr", () => {
+        it("Returns the Err of the Result when it is Err", () => {
+            const res = Err(1);
+            expect(res.expectErr("didnt error")).toEqual(1);
+        });
+
+        it("Throws an Error with the Ok value and arg message when Result is Ok", () => {
+            const res = Ok("hello");
+            expect(() => res.expectErr("didnt error")).toThrow(
+                new Error("didnt error: hello")
+            );
         });
     });
 

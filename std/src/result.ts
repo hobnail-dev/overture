@@ -125,7 +125,52 @@ export class Result<A, E> {
      */
     unwrapErr(): E {
         if (this.isOk()) {
-            throw new Error("Could not extract error from Result.");
+            throw new Error(`Could not extract error from Result: ${this.val}`);
+        }
+
+        return this.err!;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `expect: string -> A`
+     *
+     * ---
+     * @throws if the value is an `Err`, with the message param and the content of the `Err`.
+     * @param msg error message to be displayed when error is thrown.
+     * @returns the contained `Ok` value.
+     * @example
+     * const x = Err("oh no!");
+     * x.expect("Testing expect"); // throws Error with message 'Testing expect: oh no!'
+     */
+    expect(msg: string): A {
+        if (this.isOk()) return this.val!;
+
+        const errMsg =
+            typeof this.err === "string"
+                ? this.err
+                : JSON.stringify(this.err, undefined, 2);
+
+        throw new Error(`${msg}: ${errMsg}`);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `expectErr: string -> E`
+     *
+     * ---
+     * @throws if the value is an `Ok`, with the message param and the content of the `Ok`.
+     * @param msg error message to be displayed when error is thrown.
+     * @returns the contained `Err` value.
+     * @example
+     * const x = Ok(10);
+     * x.expectErr("Testing expectErr"); // throws Error with message 'Testing expectErr: 10'
+     */
+    expectErr(msg: string): E {
+        if (this.isOk()) {
+            throw new Error(`${msg}: ${this.val}`);
         }
 
         return this.err!;
