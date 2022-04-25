@@ -38,4 +38,32 @@ describe("Nullable", () => {
             expect(e).toBeNull();
         });
     });
+
+    describe("::zip", () => {
+        const f = (x: Nullable<string>): Nullable<string> => x; // used to test type prediction
+
+        it("zips together two nullables in a tuple if they are both not null", () => {
+            const x = Nullable.zip("one", 2);
+            expect(x).toEqual(["one", 2]);
+
+            const y = Nullable.zip(1)("two");
+            expect(y).toEqual([1, "two"]);
+        });
+
+        it("Returns the first Nullable value if it is Nullish", () => {
+            const x: Nullable<[string, number]> = Nullable.zip(f(undefined), 2);
+            expect(x).toBeUndefined();
+
+            const y: Nullable<[string, boolean]> = Nullable.zip(f(null))(false);
+            expect(y).toBeNull();
+        });
+
+        it("Returns the second Nullable value if it is Nullish and the first one is not", () => {
+            const x: Nullable<[number, string]> = Nullable.zip(1, f(undefined));
+            expect(x).toBeUndefined();
+
+            const y: Nullable<[boolean, string]> = Nullable.zip(true)(f(null));
+            expect(y).toBeNull();
+        });
+    });
 });
