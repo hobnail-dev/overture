@@ -15,7 +15,7 @@ export namespace Nullable {
     };
 
     /**
-     * `map: (Nullable<A>, (A -> B)) -> Nullable<B>`
+     * `chain: (Nullable<A>, (A -> B)) -> Nullable<B>`
      *
      * ---
      * Evaluates the given function against the given `Nullable` value if it is not `null` or `undefined`.
@@ -28,40 +28,42 @@ export namespace Nullable {
      * const b = Nullable.map(undefined, x => x * 2);
      * expect(b).toEqual(undefined);
      */
-    export const map = <A, B>(
+    export function chain<A, B>(
         a: Nullable<A>,
         fn: (a: NonNullable<A>) => B
-    ): Nullable<B> => {
-        if (isNullish(a)) {
-            return a as any;
-        }
-
-        return fn(a!);
-    };
+    ): Nullable<NonNullable<B>>;
 
     /**
-     * `andThen: (Nullable<A>, (A -> Nullable<B>)) -> Nullable<B>`
+     * `chain: (A -> B) -> Nullable<A> -> Nullable<B>`
      *
      * ---
      * Evaluates the given function against the given `Nullable` value if it is not `null` or `undefined`.
-     * @param fn a binder function.
-     * @returns The resulting value of the binder function.
+     * @param fn mapping function.
+     * @returns The resulting value of the mapping function.
      * @example
-     * const a = some(5).bind(x => some(x * 2));
-     * expect(a.value).toEqual(10);
+     * const a = Nullable.map(x => x * 2)(5);
+     * expect(a).toEqual(10);
      *
-     * const b = none().bind(x => some(x * 2));
-     * expect(() => b.value).toThrow();
-     * expect(b.isNone).toEqual(true);
+     * const b = Nullable.map(x => x * 2)(undefined);
+     * expect(b).toEqual(undefined);
      */
-    export const andThen = <A, B>(
-        a: Nullable<A>,
-        fn: (a: NonNullable<A>) => Nullable<B>
-    ): Nullable<B> => {
-        if (isNullish(a)) {
-            return a as any;
+    export function chain<A, B>(
+        fn: (a: NonNullable<A>) => B
+    ): (a: Nullable<A>) => Nullable<NonNullable<B>>;
+
+    export function chain<A, B>(
+        arg1: Nullable<A> | ((a: NonNullable<A>) => B),
+        arg2?: (a: NonNullable<A>) => B
+    ): Nullable<B> | ((a: NonNullable<A>) => Nullable<B>) {
+        if (typeof arg1 === "function") {
+            return a =>
+                isNullish(a) ? a : (arg1 as (a: NonNullable<A>) => B)(a);
         }
 
-        return fn(a!);
-    };
+        if (isNullish(arg1)) {
+            return arg1 as any;
+        }
+
+        return arg2!(arg1!);
+    }
 }

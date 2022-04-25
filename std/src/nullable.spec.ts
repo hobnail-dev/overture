@@ -5,6 +5,7 @@ describe("Nullable", () => {
         it("Returns true if value is null", () => {
             expect(Nullable.isNullish(null)).toBe(true);
         });
+
         it("Returns true if value is undefined", () => {
             expect(Nullable.isNullish(undefined)).toBe(true);
         });
@@ -14,31 +15,27 @@ describe("Nullable", () => {
         });
     });
 
-    describe("::map", () => {
+    describe("::chain", () => {
         it("applies the mapping fn on the value if it is not null or undefined", () => {
-            const a = Nullable.map(5, x => x * 2);
+            const a = Nullable.chain(5, x => x * 2);
             expect(a).toEqual(10);
+
+            const b = Nullable.chain((x: number) => x * 2)(5);
+            expect(b).toEqual(10);
         });
 
         it("does nothing if the value is null or undefined", () => {
-            const b = Nullable.map(undefined, x => x * 2);
+            const b = Nullable.chain(undefined, x => x * 2);
             expect(b).toBeUndefined();
 
-            const c = Nullable.map(null, x => x * 2);
-            expect(c).toBeNull();
-        });
-    });
+            const c = Nullable.chain((x: number) => x * 2)(undefined);
+            expect(c).toBeUndefined();
 
-    describe("::andThen()", () => {
-        it("Evaluates the given function against the value of Nullable<A> if it is not null or undefined.", () => {
-            const a = Nullable.andThen(5, x => x * 2);
-            expect(a).toEqual(10);
+            const d = Nullable.chain(null, x => x * 2);
+            expect(d).toBeNull();
 
-            const b = Nullable.andThen(5, () => undefined);
-            expect(b).toBeUndefined();
-
-            const c = Nullable.andThen(null, () => undefined);
-            expect(c).toBeNull();
+            const e = Nullable.chain((x: number) => x * 2)(null);
+            expect(e).toBeNull();
         });
     });
 });
