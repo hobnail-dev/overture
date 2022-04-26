@@ -15,6 +15,20 @@ describe("Nullable", () => {
         });
     });
 
+    describe("::isNotNullish", () => {
+        it("Returns false if value is null", () => {
+            expect(Nullable.isNotNullish(null)).toBe(false);
+        });
+
+        it("Returns false if value is undefined", () => {
+            expect(Nullable.isNotNullish(undefined)).toBe(false);
+        });
+
+        it("Returns true if value is not null or undefined", () => {
+            expect(Nullable.isNotNullish(0)).toBe(true);
+        });
+    });
+
     describe("::chain", () => {
         it("applies the mapping fn on the value if it is not null or undefined", () => {
             const a = Nullable.chain(5, x => x * 2);

@@ -15,6 +15,17 @@ export namespace Nullable {
     };
 
     /**
+     * `isNotNullish: A -> boolean`
+     *
+     * ---
+     * @param a value that can be `null` or `undefined`
+     * @returns `true` is the value is not `null` or `undefined`.
+     */
+    export const isNotNullish = <A>(a: Nullable<A>): a is NonNullable<A> => {
+        return a != null;
+    };
+
+    /**
      * `chain: (Nullable<A>, (A -> B)) -> Nullable<B>`
      *
      * ---
