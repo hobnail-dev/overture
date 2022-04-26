@@ -22,10 +22,10 @@ export namespace Nullable {
      * @param fn mapping function.
      * @returns The resulting value of the mapping function.
      * @example
-     * const a = Nullable.map(5, x => x * 2);
+     * const a = Nullable.chain(5, x => x * 2);
      * expect(a).toEqual(10);
      *
-     * const b = Nullable.map(undefined, x => x * 2);
+     * const b = Nullable.chain(undefined, x => x * 2);
      * expect(b).toEqual(undefined);
      */
     export function chain<A, B>(
@@ -41,10 +41,10 @@ export namespace Nullable {
      * @param fn mapping function.
      * @returns The resulting value of the mapping function.
      * @example
-     * const a = Nullable.map(x => x * 2)(5);
+     * const a = Nullable.chain(x => x * 2)(5);
      * expect(a).toEqual(10);
      *
-     * const b = Nullable.map(x => x * 2)(undefined);
+     * const b = Nullable.chain(x => x * 2)(undefined);
      * expect(b).toEqual(undefined);
      */
     export function chain<A, B>(
@@ -70,42 +70,42 @@ export namespace Nullable {
     }
 
     /**
-     * `zip: (Nullable<A>, Nullable<B>) -> Nullable<A * B>`
+     * `and: (Nullable<A>, Nullable<B>) -> Nullable<A * B>`
      *
      * ---
      * @returns the tupled values of the two `Nullable`s if they are all not `null` nor `undefined`.
      * @example
-     * const a = Nullable.zip(false, "bla");
+     * const a = Nullable.and(false, "bla");
      * expect(a).toEqual([false, "bla"]);
      *
-     * const b = Nullable.zip("two", null);
+     * const b = Nullable.and("two", null);
      * expect(b).toBeNull();
      *
-     * const c = Nullable.zip(undefined, 3);
+     * const c = Nullable.and(undefined, 3);
      * expect(c).toBeUndefined();
      */
-    export function zip<A, B>(a: Nullable<A>, b: Nullable<B>): Nullable<[A, B]>;
+    export function and<A, B>(a: Nullable<A>, b: Nullable<B>): Nullable<[A, B]>;
 
     /**
-     * `zip: Nullable<A> -> Nullable<B> -> Nullable<A * B>`
+     * `and: Nullable<A> -> Nullable<B> -> Nullable<A * B>`
      *
      * ---
      * @returns the tupled values of the two `Nullable`s if they are all not `null` nor `undefined`.
      * @example
-     * const a = Nullable.zip(false)("bla");
+     * const a = Nullable.and(false)("bla");
      * expect(a).toEqual([false, "bla"]);
      *
-     * const b = Nullable.zip("two")(null);
+     * const b = Nullable.and("two")(null);
      * expect(b).toBeNull();
      *
-     * const c = Nullable.zip(undefined)(3);
+     * const c = Nullable.and(undefined)(3);
      * expect(c).toBeUndefined();
      */
-    export function zip<A>(
+    export function and<A>(
         a: Nullable<A>
     ): <B>(b: Nullable<B>) => Nullable<[A, B]>;
 
-    export function zip<A, B>(
+    export function and<A, B>(
         a: Nullable<A>,
         b?: Nullable<B>
     ): Nullable<[A, B]> | ((b: B) => Nullable<[A, B]>) {
