@@ -262,6 +262,36 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `and: Result<B, F> -> Result<A * B, E | F>`
+     *
+     * ---
+     * @param r `Result` to zip with this one.
+     * @returns the tupled values of the two `Result`s if they are all `Ok`, otherwise returns this `Err` or `r`'s `Err`.
+     * @example
+     * const x = Ok("hello").and(Ok(10));
+     * expect(x.val).toEqual(["hello", 10]);
+     *
+     * const y = Err("oops").and(Err("oh no"));
+     * expect(y.err).toEqual("oops");
+     *
+     * const z = Ok(1).and(Err("fatal"));
+     * expect(z.err).toEqual("fatal");
+     */
+    and<B, F>(r: Result<B, F>): Result<[A, B], E | F> {
+        if (this.isOk()) {
+            if (r.isOk()) {
+                return Result.ok([this.val!, r.val!]);
+            }
+
+            return r as any;
+        }
+
+        return this as any;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `collectOption: (A -> Option<B>) -> Option<Result<B, E>>`
      *
      * ---

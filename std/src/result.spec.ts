@@ -150,6 +150,27 @@ describe("Result", () => {
         });
     });
 
+    describe(".and", () => {
+        it("zips together two Oks", () => {
+            const a = Ok(1);
+            const b = Ok(true);
+
+            const ab = a.and(b);
+            expect(ab.val).toEqual([1, true]);
+        });
+
+        it("returns the instance Err, and then the arg Err", () => {
+            const a = Err("oops");
+            const b = Err("oh no!");
+
+            const ab = a.and(b);
+            const ba = b.and(a);
+
+            expect(ab.err).toEqual("oops");
+            expect(ba.err).toEqual("oh no!");
+        });
+    });
+
     describe(".collectOption", () => {
         it("Executes an Option returning function against the value of the Result when it is Ok, returning the Option with it's value wrapped in a Result", () => {
             const a = Ok(1).collectOption(x => Some(x * 2));
