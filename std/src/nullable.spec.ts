@@ -53,7 +53,7 @@ describe("Nullable", () => {
         });
     });
 
-    describe("::zip", () => {
+    describe("::and", () => {
         const f = (x: Nullable<string>): Nullable<string> => x; // used to test type prediction
 
         it("zips together two nullables in a tuple if they are both not null", () => {
