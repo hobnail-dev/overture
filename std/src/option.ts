@@ -49,6 +49,10 @@ export class Option<A> {
      */
     static none: Option<never> = new Option();
 
+    *[Symbol.iterator](): Generator<Option<A>, A, any> {
+        return yield this;
+    }
+
     /**
      * `this: Option<A>`
      *
