@@ -1,3 +1,4 @@
+import { AsyncResult } from "./asyncResult";
 import { None, Some } from "./option";
 import { Err, Ok, Result, result } from "./result";
 
@@ -19,6 +20,44 @@ describe("Result", () => {
             expect(x).toBeInstanceOf(Result);
             expect(x.isOk()).toBe(false);
             expect(x.isErr()).toBe(true);
+        });
+    });
+
+    describe("::try", () => {
+        it("Creates an Ok Result from a function that might throw but didn't", () => {
+            const x = Result.try(() => "didnt throw");
+
+            expect(x.val).toEqual("didnt throw");
+        });
+
+        it("Creates an Err Result with an Error from a function that throws", () => {
+            const x = Result.try(() => {
+                throw new Error("oh no");
+            });
+
+            expect(x.err?.name).toEqual("Error");
+            expect(x.err?.message).toEqual("oh no");
+        });
+    });
+
+    describe("::tryAsync", () => {
+        it("Creates an Ok AsyncResult from an async function that might throw but didn't", async () => {
+            const x = Result.tryAsync(async () => "didnt throw");
+            expect(x).toBeInstanceOf(AsyncResult);
+
+            const y = await x;
+            expect(y.val).toEqual("didnt throw");
+        });
+
+        it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
+            const x = Result.tryAsync(async () => {
+                throw new Error("oh no");
+            });
+            expect(x).toBeInstanceOf(AsyncResult);
+
+            const y = await x;
+            expect(y.err?.name).toEqual("Error");
+            expect(y.err?.message).toEqual("oh no");
         });
     });
 
@@ -95,6 +134,19 @@ describe("Result", () => {
             expect(() => res.expectErr("didnt error")).toThrow(
                 new Error("didnt error: hello")
             );
+        });
+    });
+
+    describe(".trace", () => {
+        it("Adds a stack trace if the Result is an Err", () => {
+            const res = Err("no!").trace();
+            expect(res.stack).toBeDefined();
+            expect(res.stack?.length).toBeGreaterThan(0);
+        });
+
+        it("Does nothing if the Result is Ok", () => {
+            const res = Ok(1).trace();
+            expect(res.stack).toBeUndefined();
         });
     });
 

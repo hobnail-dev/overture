@@ -1,3 +1,4 @@
+import { AsyncResult } from "./asyncResult";
 import { Option } from "./option";
 
 /**
@@ -13,7 +14,11 @@ export class Result<A, E> {
         /**
          * The raw `Err` value, inside the `Result<A, E>`.
          */
-        readonly err?: E
+        readonly err?: E,
+        /**
+         * `Err` stack trace.
+         */
+        readonly stack?: string
     ) {}
 
     /**
@@ -44,6 +49,33 @@ export class Result<A, E> {
      */
     static err<A = never, E = never>(error: E): Result<A, E> {
         return new Result(undefined, error) as any;
+    }
+
+    static try<A>(fn: () => A): Result<A, Error> {
+        try {
+            return Result.ok(fn());
+        } catch (e) {
+            return Result.err(
+                e instanceof Error
+                    ? e
+                    : new Error(JSON.stringify(e, undefined, 2))
+            );
+        }
+    }
+
+    static tryAsync<A>(fn: () => Promise<A>): AsyncResult<A, Error> {
+        const catcher = (e: unknown) =>
+            Result.err(
+                e instanceof Error
+                    ? e
+                    : new Error(JSON.stringify(e, undefined, 2))
+            );
+
+        const x: Promise<Result<A, Error>> = fn()
+            .then(Result.ok)
+            .catch(catcher);
+
+        return AsyncResult.from(x);
     }
 
     *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
@@ -174,6 +206,26 @@ export class Result<A, E> {
         }
 
         return this.err!;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `trace: () -> Result<A, E>`
+     *
+     * ---
+     * Adds a stack trace to the `Result` if it is an `Err`.
+     */
+    trace(): Result<A, E> {
+        if (this.isErr()) {
+            return new Result(
+                this.val,
+                this.err,
+                new Error().stack?.replace("Error", "Err")
+            );
+        }
+
+        return this;
     }
 
     /**
