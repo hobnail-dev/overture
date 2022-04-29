@@ -100,10 +100,29 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `isOkWith: A -> boolean`
+     *
+     * ---
+     * @returns `true` if the `Result<A, E>` is `Ok` wrapping a value matching the predicate.
+     * @example
+     * const val = Ok(4);
+     * expect(val.isOkWith(x => x % 2 === 0)).toBe(true);
+     */
+    isOkWith(predicate: (a: A) => boolean): boolean {
+        if (this.isOk()) {
+            return predicate(this.val!);
+        }
+
+        return false;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `isErr: () -> boolean`
      *
      * ---
-     * @returns `true` if the `Result<A, E>` is contains an Err.
+     * @returns `true` if the `Result<A, E>` contains an Err.
      * @example
      * const val = Err("oh no!");
      * expect(val.isErr()).toBe(true);
@@ -111,6 +130,25 @@ export class Result<A, E> {
     isErr(): boolean {
         // Double equality used here since it treats null and undefined the same.
         return !(this.err == null);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `isErrWith: E -> boolean`
+     *
+     * ---
+     * @returns `true` if the `Result<A, E>` is contains an `Err` matching the predicate.
+     * @example
+     * const val = Err("oh no!");
+     * expect(val.isErrWith(x => x.length > 0)).toBe(true);
+     */
+    isErrWith(predicate: (e: E) => boolean): boolean {
+        if (this.isErr()) {
+            return predicate(this.err!);
+        }
+
+        return false;
     }
 
     /**
@@ -404,6 +442,56 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `inspect: (A -> void) -> Result<A, E>`
+     *
+     * ---
+     * @param fn callback to be called if the `Result` is `Ok`.
+     * @returns the original unmodified `Result`.
+     * @example
+     * const x: Result<number, string> = Ok(5).inspect(console.log); // prints 5
+     * expect(x).toBeInstanceOf(Result);
+     * expect(x.val).toEqual(5);
+     *
+     * const y: Result<number, string> = Err("oops").inspect(console.log); // doesn't print
+     * expect(y).toBeInstanceOf(Result);
+     * expect(y.err).toEqual("oops");
+     */
+    inspect(fn: (a: A) => void): Result<A, E> {
+        if (this.isOk()) {
+            fn(this.val!);
+        }
+
+        return this;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `inspectErr: (E -> void) -> Result<A, E>`
+     *
+     * ---
+     * @param fn callback to be called if the `Result` is `Err`.
+     * @returns the original unmodified `Result`.
+     * @example
+     * const x: Result<number, string> = Ok(5).inspectErr(console.log); // doesn't print
+     * expect(x).toBeInstanceOf(Result);
+     * expect(x.val).toEqual(5);
+     *
+     * const y: Result<number, string> = Err("oops").inspectErr(console.log); // prints "oops"
+     * expect(y).toBeInstanceOf(Result);
+     * expect(y.err).toEqual("oops");
+     */
+    inspectErr(fn: (e: E) => void): Result<A, E> {
+        if (this.isErr()) {
+            fn(this.err!);
+        }
+
+        return this;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `collectPromise: (A -> Promise<B>) -> Promise<Result<B, E>>`
      *
      * ---
@@ -448,6 +536,16 @@ export class Result<A, E> {
     static transposeArray = <A, E>(
         ro: Result<Array<A>, E>
     ): Array<Result<A, E>> => ro.collectArray(x => x);
+
+    /**
+     * `flatten: Result<Result<A, E>, F> -> Result<A, E | F>`
+     *
+     * ---
+     * Converts from `Result<Result<A, E>, F>` to `Result<A, E | F>`.
+     * @returns a flattened `Result`.
+     */
+    static flatten = <A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> =>
+        r.andThen(x => x);
 }
 
 /**

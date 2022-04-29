@@ -84,6 +84,40 @@ describe("Result", () => {
         });
     });
 
+    describe(".isOkWith", () => {
+        it("Returns true if Result is an Ok matching the predicate", () => {
+            const a = Ok(2);
+            expect(a.isOkWith(x => x % 2 === 0)).toBe(true);
+        });
+
+        it("Returns false if Result is an Ok and doesnt match the predicate", () => {
+            const a = Ok(3);
+            expect(a.isOkWith(x => x % 2 === 0)).toBe(false);
+        });
+
+        it("Returns false if Result is an Err", () => {
+            const a = Err<number, number>(2);
+            expect(a.isOkWith(() => true)).toBe(false);
+        });
+    });
+
+    describe(".isErrWith", () => {
+        it("Returns true if Result is an Err matching the predicate", () => {
+            const a = Err(2);
+            expect(a.isErrWith(x => x % 2 === 0)).toBe(true);
+        });
+
+        it("Returns false if Result is an Err and doesnt match the predicate", () => {
+            const a = Err(3);
+            expect(a.isErrWith(x => x % 2 === 0)).toBe(false);
+        });
+
+        it("Returns false if Result is Ok", () => {
+            const a = Ok<number, number>(2);
+            expect(a.isErrWith(() => true)).toBe(false);
+        });
+    });
+
     describe(".unwrap", () => {
         it("Returns the value of the Result when it is Ok", () => {
             const res = Ok(1);
@@ -256,6 +290,36 @@ describe("Result", () => {
         });
     });
 
+    describe(".inspect", () => {
+        it("Executes a side effectful callback against the Ok value of a Result if it is Ok, returning the unmodified Result", () => {
+            let foo = 0;
+            const bar = Ok(5).inspect(x => (foo = x * 2));
+            expect(foo).toEqual(10);
+            expect(bar.val).toEqual(5);
+        });
+
+        it("Does not execute the given callback if the Result is an Err", () => {
+            let fn = jest.fn();
+            Err<number, string>("bla").inspect(fn);
+            expect(fn).toHaveBeenCalledTimes(0);
+        });
+    });
+
+    describe(".inspectErr", () => {
+        it("Executes a side effectful callback against the Err value of a Result if it is Err, returning the unmodified Result", () => {
+            let foo = 0;
+            const bar = Err(5).inspectErr(x => (foo = x * 2));
+            expect(foo).toEqual(10);
+            expect(bar.err).toEqual(5);
+        });
+
+        it("Does not execute the given callback if the Result is an Err", () => {
+            let fn = jest.fn();
+            Ok<string, number>("bla").inspectErr(fn);
+            expect(fn).toHaveBeenCalledTimes(0);
+        });
+    });
+
     describe(".collectPromise", () => {
         it("Executes a Promise returning function against the value of the Result when it is Ok, returning the Promise with it's value wrapped in a Result", async () => {
             const a = await Ok(1).collectPromise(x => Promise.resolve(x * 2));
@@ -313,6 +377,16 @@ describe("Result", () => {
                 .to(Result.transposeArray);
 
             expect(res[0]!.err).toEqual("oops");
+        });
+    });
+
+    describe("::flatten", () => {
+        it("Converts from Result<Result<A, E> F> to Result<A, E | F>", () => {
+            const x = Ok(Ok("hello")).to(Result.flatten);
+            expect(x.val).toEqual("hello");
+
+            const y = Ok(Err(6)).to(Result.flatten);
+            expect(y.err).toEqual(6);
         });
     });
 
