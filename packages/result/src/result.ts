@@ -343,6 +343,44 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `forEach: A -> void`
+     *
+     * ---
+     * Executes a function against wrapped `Ok` value if the `Result` is `Ok`.
+     * @example
+     * let x = 0;
+     * Ok(5).forEach(n => (x = n));
+     *
+     * expect(x).toEqual(5);
+     */
+    forEach(fn: (a: A) => void): void {
+        if (this.isOk()) {
+            fn(this.val!);
+        }
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `forEachErr: E -> void`
+     *
+     * ---
+     * Executes a function against wrapped `Err` value if the `Result` is an `Err`.
+     * @example
+     * let x = 0;
+     * Err(5).forEachErr(n => (x = n));
+     *
+     * expect(x).toEqual(5);
+     */
+    forEachErr(fn: (e: E) => void): void {
+        if (this.isErr()) {
+            fn(this.err!);
+        }
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `match: ((A -> B), (E -> B)) -> B`
      *
      * ---

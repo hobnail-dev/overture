@@ -320,6 +320,38 @@ describe("Result", () => {
         });
     });
 
+    describe(".forEach", () => {
+        it("Executes a function against the Ok value of the Result if it is Ok", () => {
+            let x = 0;
+            Ok(5).forEach(n => (x = n));
+
+            expect(x).toEqual(5);
+        });
+
+        it("Doesn't do anything if the Result is an Err", () => {
+            let x = 0;
+            Err<number, number>(5).forEach(n => (x = n));
+
+            expect(x).toEqual(0);
+        });
+    });
+
+    describe(".forEachErr", () => {
+        it("Executes a function against the Err value of the Result if it is Err", () => {
+            let x = 0;
+            Err(5).forEachErr(n => (x = n));
+
+            expect(x).toEqual(5);
+        });
+
+        it("Doesn't do anything if the Result is an Ok", () => {
+            let x = 0;
+            Ok<number, number>(5).forEachErr(n => (x = n));
+
+            expect(x).toEqual(0);
+        });
+    });
+
     describe(".collectPromise", () => {
         it("Executes a Promise returning function against the value of the Result when it is Ok, returning the Promise with it's value wrapped in a Result", async () => {
             const a = await Ok(1).collectPromise(x => Promise.resolve(x * 2));
