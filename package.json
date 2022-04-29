@@ -3,7 +3,10 @@
     "version": "1.0.0",
     "private": "true",
     "workspaces": [
-        "std"
+        "packages/std",
+        "packages/result",
+        "packages/nullable",
+        "packages/fun"
     ],
     "devDependencies": {
         "@changesets/changelog-github": "^0.4.3",
@@ -25,6 +28,6 @@
         "prepare": "yarn husky install",
         "test": "cd std && jest --all",
         "test:changed": "cd std && jest -o",
-        "pre-commit": "yarn lint-staged && yarn test:changed"
+        "pre-commit": "yarn lint-staged"
     }
 }

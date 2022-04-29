@@ -1,5 +1,4 @@
 import { AsyncResult } from "./asyncResult";
-import { Option } from "./option";
 
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
@@ -256,6 +255,31 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `mapErr: (E -> F) -> Result<A, F>`
+     *
+     * ---
+     * Evaluates the given function against the `E` value of `Result<A, E>` if it is an `Err`.
+     * @param fn mapping function.
+     * @returns The resulting value of the mapping function wrapped in a `Result`.
+     * @example
+     * const x = Err(5).mapErr(x => x * 2);
+     * expect(x.unwrapErr()).toEqual(10);
+     *
+     * const y = Ok("foo").mapErr(x => x * 2);
+     * expect(() => y.unwrapErr()).toThrow();
+     * expect(y.unwrap()).toEqual("foo");
+     */
+    mapErr<F>(fn: (a: E) => F): Result<A, F> {
+        if (this.isErr()) {
+            return Result.err(fn(this.err!));
+        }
+
+        return this as any;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `andThen: (A -> Result<B, F>) -> Result<B, E | F>`
      *
      * ---
@@ -344,21 +368,6 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
-     * `collectOption: (A -> Option<B>) -> Option<Result<B, E>>`
-     *
-     * ---
-     */
-    collectOption<B>(fn: (a: A) => Option<B>): Option<Result<B, E>> {
-        if (this.isErr()) {
-            return Option.from(Result.err(this.err!));
-        }
-
-        return fn(this.val!).map(Result.ok);
-    }
-
-    /**
-     * `this: Result<A, E>`
-     *
      * `collectPromise: (A -> Promise<B>) -> Promise<Result<B, E>>`
      *
      * ---
@@ -385,15 +394,6 @@ export class Result<A, E> {
 
         return fn(this.val!).map(Result.ok);
     }
-
-    /**
-     * `transposeOption: Result<Option<A>, E> -> Option<Result<A, E>>`
-     *
-     * ---
-     */
-    static transposeOption = <A, E>(
-        ro: Result<Option<A>, E>
-    ): Option<Result<A, E>> => ro.collectOption(x => x);
 
     /**
      * `transposePromise: Result<Promise<A>, E> -> Promise<Result<A, E>>`

@@ -1,0 +1,14 @@
+{
+    "name": "@hobnail/nullable",
+    "version": "0.0.0",
+    "description": "Utility type and functions for dealing with Nullable values.",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/jest": "^27.4.1",
+        "jest": "^27.5.1",
+        "ts-jest": "^27.1.4"
+    },
+    "scripts": {
+        "test": "jest --watch"
+    }
+}

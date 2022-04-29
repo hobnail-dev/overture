@@ -51,7 +51,7 @@ export const asyncResult = <A, E, B, R extends Result<A, E>>(
         B,
         A
     >
-): Promise<Result<B, NonNullable<R["err"]>>> => {
+): AsyncResult<B, NonNullable<R["err"]>> => {
     const iterator = genFn();
     let state = iterator.next();
 
@@ -92,5 +92,5 @@ export const asyncResult = <A, E, B, R extends Result<A, E>>(
         );
     }
 
-    return run(state) as any;
+    return AsyncResult.from(run(state)) as any;
 };

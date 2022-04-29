@@ -1,5 +1,4 @@
 import { AsyncResult } from "./asyncResult";
-import { None, Some } from "./option";
 import { Err, Ok, Result, result } from "./result";
 
 describe("Result", () => {
@@ -223,21 +222,6 @@ describe("Result", () => {
         });
     });
 
-    describe(".collectOption", () => {
-        it("Executes an Option returning function against the value of the Result when it is Ok, returning the Option with it's value wrapped in a Result", () => {
-            const a = Ok(1).collectOption(x => Some(x * 2));
-            expect(a.val!.val).toEqual(2);
-
-            const b = Ok(1).collectOption(() => None);
-            expect(b.isNone()).toBe(true);
-        });
-
-        it("Returns Some Err when the Result is an Err", () => {
-            const res = Err("oops").collectOption(x => Some(x * 2));
-            expect(res.val!.isErr()).toBe(true);
-        });
-    });
-
     describe(".collectPromise", () => {
         it("Executes a Promise returning function against the value of the Result when it is Ok, returning the Promise with it's value wrapped in a Result", async () => {
             const a = await Ok(1).collectPromise(x => Promise.resolve(x * 2));
@@ -263,28 +247,6 @@ describe("Result", () => {
             const res = Err("oops").collectArray(x => [x]);
 
             expect(res[0]!.err).toEqual("oops");
-        });
-    });
-
-    describe("::tranposeOption", () => {
-        it("Flips a Result<Option<A>, E> into an Option<Result<A, E>>", () => {
-            const a = Ok(1)
-                .map(x => Some(x * 2))
-                .to(Result.transposeOption);
-
-            expect(a.val!.val).toEqual(2);
-
-            const b = Ok(1)
-                .map(() => None)
-                .to(Result.transposeOption);
-
-            expect(b.isNone()).toBe(true);
-
-            const res = Err("oops")
-                .map(x => Some(x * 2))
-                .to(Result.transposeOption);
-
-            expect(res.val!.isErr()).toBe(true);
         });
     });
 
