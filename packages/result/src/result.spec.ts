@@ -195,6 +195,18 @@ describe("Result", () => {
         });
     });
 
+    describe(".mapErr", () => {
+        it("Executes a function against the value of the Result when it is Err", () => {
+            const res = Err(1).mapErr(x => x * 2);
+            expect(res.err).toEqual(2);
+        });
+
+        it("Does nothing when the Result is Ok", () => {
+            const res = Ok<string, number>("hello").mapErr(x => x * 2);
+            expect(res.val).toEqual("hello");
+        });
+    });
+
     describe(".andThen", () => {
         it("Executes a Result returning function against the value of the Result when it is Ok, returning a flattened Result", () => {
             const res = Ok(1).andThen(x => Ok(x * 2));
@@ -213,17 +225,17 @@ describe("Result", () => {
         });
     });
 
-    describe(".match", () => {
+    describe(".mapOrElse", () => {
         const okFn = (n: number) => n.toString();
         const id = <A>(x: A) => x;
 
         it("returns the value from okFn if is Ok", () => {
-            const res = Ok(1).match(okFn, id);
+            const res = Ok(1).mapOrElse(id, okFn);
             expect(res).toEqual("1");
         });
 
         it("returns the value from errFn if is Err", () => {
-            const res = Err("oh no").match(okFn, id);
+            const res = Err("oh no").mapOrElse(id, okFn);
             expect(res).toEqual("oh no");
         });
     });

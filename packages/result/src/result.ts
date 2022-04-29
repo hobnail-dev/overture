@@ -318,6 +318,62 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `mapOr: (B, A -> B) -> B`
+     *
+     * ---
+     * @param b default value to be used in `Result` is `Err`.
+     * @returns the provided default (if `Err`), or applies a function to the contained value (if `Ok`).
+     * @example
+     * const x = Ok("foo").mapOr(42, v => v.length);
+     * expect(x).toEqual(3);
+     *
+     * const y = Err("bar").mapOr(42, v => v.length);
+     * expect(y).toEqual(42);
+     */
+    mapOr<B>(b: B, fn: (a: A) => B): B {
+        if (this.isOk()) {
+            return fn(this.val!);
+        }
+
+        return b;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `mapOrElse: ((E -> B), (A -> B)) -> B`
+     *
+     * ---
+     * Maps a `Result<A, E>` to `B` by applying `errFn` to a contained `Err` value, or `okFn` to a contained `Ok` value.
+     * @param okFn function to be executed if `Result<A, E>` is `Ok`.
+     * @param errFn function to be executed if `Result<A, E>` is `Err`.
+     * @returns the result of `okFn` or `errFn`.
+     * @example
+     * const x = Ok<string, string>("foo").mapOrElse(
+     *   err => err.length,
+     *   val => val.length
+     * );
+     *
+     * expect(x).toEqual(3);
+     *
+     * const y = Err<string, string>("oh no").mapOrElse(
+     *   err => err.length,
+     *   val => val.length
+     * );
+     *
+     * expect(y).toEqual(5);
+     */
+    mapOrElse<B>(errFn: (b: E) => B, okFn: (a: A) => B): B {
+        if (this.isOk()) {
+            return okFn(this.val!);
+        }
+
+        return errFn(this.err!);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `andThen: (A -> Result<B, F>) -> Result<B, E | F>`
      *
      * ---
@@ -376,24 +432,6 @@ export class Result<A, E> {
         if (this.isErr()) {
             fn(this.err!);
         }
-    }
-
-    /**
-     * `this: Result<A, E>`
-     *
-     * `match: ((A -> B), (E -> B)) -> B`
-     *
-     * ---
-     * @param okFn function to be executed if `Result<A, E>` is `Ok`.
-     * @param errFn function to be executed if `Result<A, E>` is `Err`.
-     * @returns the result of `okFn` or `errFn`.
-     */
-    match<B>(okFn: (a: A) => B, errFn: (b: E) => B): B {
-        if (this.isOk()) {
-            return okFn(this.val!);
-        }
-
-        return errFn(this.err!);
     }
 
     /**
