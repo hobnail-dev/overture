@@ -2,6 +2,7 @@
  * A value that can be `null` or `undefined`.
  */
 export type Nullable<A> = NonNullable<A> | null | undefined;
+
 export namespace Nullable {
     /**
      * `isNullish: A -> boolean`
@@ -10,7 +11,9 @@ export namespace Nullable {
      * @param a value that can be `null` or `undefined`
      * @returns `true` is the value is `null` or `undefined`.
      */
-    export const isNullish = <A>(a: Nullable<A>): a is null | undefined => {
+    export const isNullish = <A>(
+        a: A | null | undefined
+    ): a is null | undefined => {
         return a == null;
     };
 
@@ -21,7 +24,9 @@ export namespace Nullable {
      * @param a value that can be `null` or `undefined`
      * @returns `true` is the value is not `null` or `undefined`.
      */
-    export const isNotNullish = <A>(a: Nullable<A>): a is NonNullable<A> => {
+    export const isNotNullish = <A>(
+        a: A | null | undefined
+    ): a is NonNullable<A> => {
         return a != null;
     };
 
@@ -40,7 +45,7 @@ export namespace Nullable {
      * expect(b).toEqual(undefined);
      */
     export function chain<A, B>(
-        a: Nullable<A>,
+        a: A | null | undefined,
         fn: (a: NonNullable<A>) => B
     ): Nullable<NonNullable<B>>;
 
@@ -60,10 +65,10 @@ export namespace Nullable {
      */
     export function chain<A, B>(
         fn: (a: NonNullable<A>) => B
-    ): (a: Nullable<A>) => Nullable<NonNullable<B>>;
+    ): (a: A | null | undefined) => Nullable<NonNullable<B>>;
 
     export function chain<A, B>(
-        arg1: Nullable<A> | ((a: NonNullable<A>) => B),
+        arg1: A | null | undefined | ((a: NonNullable<A>) => B),
         arg2?: (a: NonNullable<A>) => B
     ): Nullable<B> | ((a: NonNullable<A>) => Nullable<B>) {
         if (typeof arg1 === "function") {
@@ -113,8 +118,8 @@ export namespace Nullable {
      * expect(c).toBeUndefined();
      */
     export function and<A>(
-        a: Nullable<A>
-    ): <B>(b: Nullable<B>) => Nullable<[A, B]>;
+        a: A | null | undefined
+    ): <B>(b: B | null | undefined) => Nullable<[A, B]>;
 
     export function and<A, B>(
         a: Nullable<A>,
