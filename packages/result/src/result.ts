@@ -368,6 +368,42 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `contains: A -> boolean`
+     *
+     * ---
+     * @returns `true` if the Result is an `Ok` value containing the given value.
+     * @example
+     * const x = Ok(2);
+     * expect(x.contains(2)).toBe(true);
+     *
+     * const x = Err("oh no");
+     * expect(x.contains(2)).toBe(false);
+     */
+    contains(a: A): boolean {
+        return this.val === a;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `containsErr: E -> boolean`
+     *
+     * ---
+     * @returns `true` if the Result is an `Err` value containing the given value.
+     * @example
+     * const x = Err("oh no");
+     * expect(x.containsErr("oh no")).toBe(true);
+     *
+     * const x = Ok(2);
+     * expect(x.containsErr("oops")).toBe(false);
+     */
+    containsErr(e: E): boolean {
+        return this.err === e;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `collectPromise: (A -> Promise<B>) -> Promise<Result<B, E>>`
      *
      * ---

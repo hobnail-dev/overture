@@ -222,6 +222,40 @@ describe("Result", () => {
         });
     });
 
+    describe(".contains", () => {
+        it("Returns true if Result is an Ok containing given value", () => {
+            const a = Ok(2);
+            expect(a.contains(2)).toBe(true);
+        });
+
+        it("Returns false if Result is an Ok and doesnt contain the given value", () => {
+            const a = Ok(2);
+            expect(a.contains(4)).toBe(false);
+        });
+
+        it("Returns false if Result is an Err", () => {
+            const a = Err<number, number>(2);
+            expect(a.contains(2)).toBe(false);
+        });
+    });
+
+    describe(".containsErr", () => {
+        it("Returns true if Result is an Err containing given value", () => {
+            const a = Err(2);
+            expect(a.containsErr(2)).toBe(true);
+        });
+
+        it("Returns false if Result is an Err and doesnt contain the given value", () => {
+            const a = Err(2);
+            expect(a.containsErr(4)).toBe(false);
+        });
+
+        it("Returns false if Result is an Ok", () => {
+            const a = Ok<number, number>(2);
+            expect(a.containsErr(2)).toBe(false);
+        });
+    });
+
     describe(".collectPromise", () => {
         it("Executes a Promise returning function against the value of the Result when it is Ok, returning the Promise with it's value wrapped in a Result", async () => {
             const a = await Ok(1).collectPromise(x => Promise.resolve(x * 2));
