@@ -10,6 +10,11 @@ describe("Result", () => {
             expect(x.isOk()).toBe(true);
             expect(x.isErr()).toBe(false);
         });
+
+        it("Creates a Result containing void", () => {
+            const x: Result<void, string> = Result.ok();
+            expect(x.unwrap()).toBeUndefined(); // void evaluates to undefined
+        });
     });
 
     describe("::err", () => {
@@ -522,6 +527,29 @@ describe("Result", () => {
         });
     });
 
+    describe(".collectNullable", () => {
+        const evenOrNull = (x: number) => (x % 2 === 0 ? x : null);
+        const evenOrUndefined = (x: number) => (x % 2 === 0 ? x : undefined);
+
+        it("Executes an Nullable returning function against the value of the Result when it is Ok, returning the Result, null or undefined", () => {
+            const a = Ok(1).collectNullable(evenOrNull);
+            expect(a).toBeNull();
+
+            const b = Ok(1).collectNullable(evenOrUndefined);
+            expect(b).toBeUndefined();
+
+            const c = Ok(2).collectNullable(evenOrUndefined);
+            expect(c!.unwrap()).toEqual(2);
+        });
+
+        it("Returns the Result if it is Err", () => {
+            const res = Err("oops").collectNullable(evenOrNull);
+
+            expect(res).toBeInstanceOf(Result);
+            expect(res!.unwrapErr()).toEqual("oops");
+        });
+    });
+
     describe("::transposePromise", () => {
         it("Flips a Result<Promise<A>, E> into a Promise<Result<A, E>>", async () => {
             const a = await Ok(1)
@@ -551,6 +579,31 @@ describe("Result", () => {
                 .to(Result.transposeArray);
 
             expect(res[0]!.err).toEqual("oops");
+        });
+    });
+
+    describe("::transposeNullable", () => {
+        const evenOrNull = (x: number) => (x % 2 === 0 ? x : null);
+        const evenOrUndefined = (x: number) => (x % 2 === 0 ? x : undefined);
+
+        it("Executes an Nullable returning function against the value of the Result when it is Ok, returning the Result, null or undefined", () => {
+            const a = Ok(1).map(evenOrNull).to(Result.transposeNullable);
+            expect(a).toBeNull();
+
+            const b = Ok(1).map(evenOrUndefined).to(Result.transposeNullable);
+            expect(b).toBeUndefined();
+
+            const c = Ok(2).map(evenOrUndefined).to(Result.transposeNullable);
+            expect(c!.unwrap()).toEqual(2);
+        });
+
+        it("Returns the Result if it is Err", () => {
+            const res = Err("oops")
+                .map(evenOrNull)
+                .to(Result.transposeNullable);
+
+            expect(res).toBeInstanceOf(Result);
+            expect(res!.unwrapErr()).toEqual("oops");
         });
     });
 
