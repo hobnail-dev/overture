@@ -130,6 +130,32 @@ describe("Result", () => {
         });
     });
 
+    describe(".unwrapOr", () => {
+        it("Returns the value of the Result when it is Ok", () => {
+            const res = Ok(9).unwrapOr(2);
+            expect(res).toEqual(9);
+        });
+
+        it("The default value if the Result is Err", () => {
+            const res = Err<number, string>("oops").unwrapOr(2);
+            expect(res).toEqual(2);
+        });
+    });
+
+    describe(".unwrapOrElse", () => {
+        const count = (x: string) => x.length;
+
+        it("Returns the value of the Result when it is Ok", () => {
+            const res = Ok(2).unwrapOrElse(count);
+            expect(res).toEqual(2);
+        });
+
+        it("The value from the callback if the Result is Err", () => {
+            const res = Err<number, string>("foo").unwrapOrElse(count);
+            expect(res).toEqual(3);
+        });
+    });
+
     describe(".unwrapErr", () => {
         it("Returns the Err of the Result when it is Err", () => {
             const res = Err(1);

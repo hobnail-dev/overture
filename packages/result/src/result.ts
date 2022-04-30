@@ -180,6 +180,50 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
+     * `unwrapOr: A -> A`
+     *
+     * ---
+     * @param a default value to return if `this` is `Err`.
+     * @returns the contained `Ok` value or `a`.
+     * @example
+     * const x = Ok(9).or(2);
+     * expect(x).toEqual(9);
+     *
+     * const y = Err("oops").or(2);
+     * expect(y).toEqual(2);
+     */
+    unwrapOr(a: A): A {
+        if (this.isOk()) return this.val!;
+
+        return a;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `unwrapOrElse: (E -> A) -> A`
+     *
+     * ---
+     * @param fn callback returning a default value to be used if `this` is `Err`.
+     * @returns the contained `Ok` value or the return value from `fn`.
+     * @example
+     * const count = (x: string) => x.length;
+     *
+     * const a = Ok(2).unwrapOrElse(count);
+     * expect(a).toEqual(2);
+     *
+     * const b = Err("foo").unwrapOrElse(count);
+     * expect(b).toEqual(3);
+     */
+    unwrapOrElse(fn: (e: E) => A): A {
+        if (this.isOk()) return this.val!;
+
+        return fn(this.err!);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
      * `unwrapErr: () -> E`
      *
      * ---
