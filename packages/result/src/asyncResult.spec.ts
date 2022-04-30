@@ -8,6 +8,33 @@ import {
 import { Err, Ok, Result } from "./result";
 
 describe("AsyncResult", () => {
+    describe("::from", () => {
+        it("Creates an AsyncResult from a Promise<Result>", async () => {
+            const a = Promise.resolve(Ok(1));
+            const b = AsyncResult.from(a);
+            expect(b).toBeInstanceOf(AsyncResult);
+            expect(await b.unwrap()).toEqual(1);
+        });
+    });
+
+    describe("::fromPromise", () => {
+        it("Creates an AsyncResult from a Promise", async () => {
+            const a = Promise.resolve(1);
+            const b = AsyncResult.fromPromise(a);
+            expect(b).toBeInstanceOf(AsyncResult);
+            expect(await b.unwrap()).toEqual(1);
+        });
+    });
+
+    describe("::fromResult", () => {
+        it("Creates an AsyncResult from a Result", async () => {
+            const a = Ok(1);
+            const b = AsyncResult.fromResult(a);
+            expect(b).toBeInstanceOf(AsyncResult);
+            expect(await b.unwrap()).toEqual(1);
+        });
+    });
+
     describe("::try", () => {
         it("Creates an Ok AsyncResult from an async function that might throw but didn't", async () => {
             const x = AsyncResult.try(async () => "didnt throw");

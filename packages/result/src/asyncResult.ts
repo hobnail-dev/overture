@@ -17,10 +17,6 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
         return new AsyncResult(Promise.resolve(result));
     }
 
-    static fromErr<A = never, E = never>(err: E): AsyncResult<A, E> {
-        return new AsyncResult(Promise.resolve(err).then(Result.err));
-    }
-
     /**
      * `try: (() -> Promise<A>) -> AsyncResult<A, Error>`
      *
