@@ -350,6 +350,22 @@ describe("Result", () => {
             expect(ab.val).toEqual([1, true]);
         });
 
+        it("returns the second Result if the first is Ok and the second is Err", () => {
+            const a = Ok(1);
+            const b = Err("oops");
+
+            const ab = a.and(b);
+            expect(ab.unwrapErr()).toEqual("oops");
+        });
+
+        it("returns the first Result if the second is Ok and the first is Err", () => {
+            const a = Err("oops");
+            const b = Ok(1);
+
+            const ab = a.and(b);
+            expect(ab.unwrapErr()).toEqual("oops");
+        });
+
         it("returns the instance Err, and then the arg Err", () => {
             const a = Err("oops");
             const b = Err("oh no!");
