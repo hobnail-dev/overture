@@ -365,6 +365,22 @@ describe("AsyncResult", () => {
             expect(await ab.unwrap()).toEqual([1, true]);
         });
 
+        it("returns the second Result if the first is Ok and the second is Err", async () => {
+            const a = AsyncOk(1);
+            const b = AsyncErr("oops");
+
+            const ab = a.and(b);
+            expect(await ab.unwrapErr()).toEqual("oops");
+        });
+
+        it("returns the first Result if the second is Ok and the first is Err", async () => {
+            const a = AsyncErr("oops");
+            const b = AsyncOk(1);
+
+            const ab = a.and(b);
+            expect(await ab.unwrapErr()).toEqual("oops");
+        });
+
         it("returns the instance Err, and then the arg Err", async () => {
             const a = AsyncErr("oops");
             const b = AsyncErr("oh no!");
