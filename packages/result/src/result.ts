@@ -108,7 +108,7 @@ export class Result<A, E> {
      * `isOkWith: A -> boolean`
      *
      * ---
-     * @returns `true` if the `Result<A, E>` is `Ok` wrapping a value matching the predicate.
+     * @returns `true` if the `Result<A, E>` is `Ok` and contains a value matching the predicate's return value.
      * @example
      * const val = Ok(4);
      * expect(val.isOkWith(x => x % 2 === 0)).toBe(true);
@@ -238,7 +238,7 @@ export class Result<A, E> {
      * expect(x.unwrapErr()).toEqual("oops");
      *
      * const y = Ok(5);
-     * expect (() => y.unwrapErr).toThrow();
+     * expect (() => y.unwrapErr()).toThrow();
      */
     unwrapErr(): E {
         if (this.isOk()) {
@@ -744,7 +744,7 @@ export class Result<A, E> {
      */
     collectPromise<B>(fn: (a: A) => Promise<B>): Promise<Result<B, E>> {
         if (this.isErr()) {
-            return Promise.resolve(Result.err(this.err!));
+            return this as any;
         }
 
         return fn(this.val!).then(Result.ok);

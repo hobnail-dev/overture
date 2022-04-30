@@ -223,6 +223,35 @@ describe("Result", () => {
         });
     });
 
+    describe(".mapOr", () => {
+        const okFn = (n: number) => n.toString();
+
+        it("returns the value from okFn if is Ok", () => {
+            const res = Ok(1).mapOr("5", okFn);
+            expect(res).toEqual("1");
+        });
+
+        it("returns the provided default value if is Err", () => {
+            const res = Err("oh no").mapOr("hello", okFn);
+            expect(res).toEqual("hello");
+        });
+    });
+
+    describe(".mapOrElse", () => {
+        const okFn = (n: number) => n.toString();
+        const id = <A>(x: A) => x;
+
+        it("returns the value from okFn if is Ok", () => {
+            const res = Ok(1).mapOrElse(id, okFn);
+            expect(res).toEqual("1");
+        });
+
+        it("returns the value from errFn if is Err", () => {
+            const res = Err("oh no").mapOrElse(id, okFn);
+            expect(res).toEqual("oh no");
+        });
+    });
+
     describe(".andThen", () => {
         it("Executes a Result returning function against the value of the Result when it is Ok, returning a flattened Result", () => {
             const res = Ok(1).andThen(x => Ok(x * 2));
@@ -241,18 +270,35 @@ describe("Result", () => {
         });
     });
 
-    describe(".mapOrElse", () => {
-        const okFn = (n: number) => n.toString();
-        const id = <A>(x: A) => x;
+    describe(".forEach", () => {
+        it("Executes a function against the Ok value of the Result if it is Ok", () => {
+            let x = 0;
+            Ok(5).forEach(n => (x = n));
 
-        it("returns the value from okFn if is Ok", () => {
-            const res = Ok(1).mapOrElse(id, okFn);
-            expect(res).toEqual("1");
+            expect(x).toEqual(5);
         });
 
-        it("returns the value from errFn if is Err", () => {
-            const res = Err("oh no").mapOrElse(id, okFn);
-            expect(res).toEqual("oh no");
+        it("Doesn't do anything if the Result is an Err", () => {
+            let x = 0;
+            Err<number, number>(5).forEach(n => (x = n));
+
+            expect(x).toEqual(0);
+        });
+    });
+
+    describe(".forEachErr", () => {
+        it("Executes a function against the Err value of the Result if it is Err", () => {
+            let x = 0;
+            Err(5).forEachErr(n => (x = n));
+
+            expect(x).toEqual(5);
+        });
+
+        it("Doesn't do anything if the Result is an Ok", () => {
+            let x = 0;
+            Ok<number, number>(5).forEachErr(n => (x = n));
+
+            expect(x).toEqual(0);
         });
     });
 
@@ -429,38 +475,6 @@ describe("Result", () => {
             let fn = jest.fn();
             Ok<string, number>("bla").inspectErr(fn);
             expect(fn).toHaveBeenCalledTimes(0);
-        });
-    });
-
-    describe(".forEach", () => {
-        it("Executes a function against the Ok value of the Result if it is Ok", () => {
-            let x = 0;
-            Ok(5).forEach(n => (x = n));
-
-            expect(x).toEqual(5);
-        });
-
-        it("Doesn't do anything if the Result is an Err", () => {
-            let x = 0;
-            Err<number, number>(5).forEach(n => (x = n));
-
-            expect(x).toEqual(0);
-        });
-    });
-
-    describe(".forEachErr", () => {
-        it("Executes a function against the Err value of the Result if it is Err", () => {
-            let x = 0;
-            Err(5).forEachErr(n => (x = n));
-
-            expect(x).toEqual(5);
-        });
-
-        it("Doesn't do anything if the Result is an Ok", () => {
-            let x = 0;
-            Ok<number, number>(5).forEachErr(n => (x = n));
-
-            expect(x).toEqual(0);
         });
     });
 
