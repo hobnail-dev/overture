@@ -1,7 +1,45 @@
-import { Async, AsyncErr, AsyncOk, asyncResult } from "./asyncResult";
+import {
+    Async,
+    AsyncErr,
+    AsyncOk,
+    AsyncResult,
+    asyncResult,
+} from "./asyncResult";
 import { Err, Ok, Result } from "./result";
 
 describe("AsyncResult", () => {
+    describe("::tryAsync", () => {
+        it("Creates an Ok AsyncResult from an async function that might throw but didn't", async () => {
+            const x = AsyncResult.try(async () => "didnt throw");
+            expect(x).toBeInstanceOf(AsyncResult);
+
+            const y = await x;
+            expect(y.val).toEqual("didnt throw");
+        });
+
+        it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
+            const x = AsyncResult.try(async () => {
+                throw new Error("oh no");
+            });
+            expect(x).toBeInstanceOf(AsyncResult);
+
+            const y = await x;
+            expect(y.err?.name).toEqual("Error");
+            expect(y.err?.message).toEqual("oh no");
+        });
+
+        it("Creates an Err AsyncResult with an Error from a function that throws a value other than an Error", async () => {
+            const x = await AsyncResult.try(async () => {
+                // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                throw "oops";
+            });
+
+            expect(x.err).toBeInstanceOf(Error);
+            expect(x.err?.name).toEqual("Error");
+            expect(x.err?.message).toEqual("oops");
+        });
+    });
+
     describe("Computation expression", () => {
         it("Happy path works correctly", async () => {
             const foo = await asyncResult(function* () {

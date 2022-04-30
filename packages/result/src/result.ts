@@ -1,5 +1,3 @@
-import { AsyncResult } from "./asyncResult";
-
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
  * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
@@ -50,31 +48,33 @@ export class Result<A, E> {
         return new Result(undefined, error) as any;
     }
 
+    /**
+     * `try: (() -> A) -> Result<A, Error>`
+     *
+     * ---
+     * @param fn function that might throw.
+     * @returns `Result<A, Error>` with the caught `Error` if it was thrown.
+     *
+     * Note: If anything other than an `Error` is thrown, will create a new `Error` and stringify the thrown value in the message.
+     *
+     * @example
+     * const a = Result.try(() => { throw new Error("oh no") });
+     * expect(a.err).toBeInstanceOf(Error);
+     * expect(a.err?.message).toEqual("oh no");
+     *
+     * const b = Result.try(() => { throw "oops" });
+     * expect(b.err).toBeInstanceOf(Error);
+     * expect(b.err?.message).toEqual("oops");
+     */
     static try<A>(fn: () => A): Result<A, Error> {
         try {
             return Result.ok(fn());
         } catch (e) {
-            return Result.err(
-                e instanceof Error
-                    ? e
-                    : new Error(JSON.stringify(e, undefined, 2))
-            );
+            const stringify = (e: unknown) =>
+                typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
+
+            return Result.err(e instanceof Error ? e : new Error(stringify(e)));
         }
-    }
-
-    static tryAsync<A>(fn: () => Promise<A>): AsyncResult<A, Error> {
-        const catcher = (e: unknown) =>
-            Result.err(
-                e instanceof Error
-                    ? e
-                    : new Error(JSON.stringify(e, undefined, 2))
-            );
-
-        const x: Promise<Result<A, Error>> = fn()
-            .then(Result.ok)
-            .catch(catcher);
-
-        return AsyncResult.from(x);
     }
 
     *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
@@ -491,6 +491,50 @@ export class Result<A, E> {
      */
     to<B>(fn: (a: Result<A, E>) => B): B {
         return fn(this);
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `toArray: () -> A[]`
+     *
+     * ---
+     * @returns a `A[]` with one element if the `Result<A, E>` is `Ok`. Otherwise returns an empty `A[]`.
+     * @example
+     * const x = Ok(5).toArray();
+     * expect(x).toEqual([5]);
+     *
+     * const y = Err("oops").toArray();
+     * expect(y.length).toEqual(0);
+     */
+    toArray(): A[] {
+        if (this.isOk()) {
+            return [this.val!];
+        }
+
+        return [];
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `toErrArray: () -> E[]`
+     *
+     * ---
+     * @returns a `E[]` with one element if the `Result<A, E>` is `Err`. Otherwise returns an empty `E[]`.
+     * @example
+     * const x = Err("oops").toErrArray();
+     * expect(x).toEqual(["oops"])
+     *
+     * const y = Ok(4).toErrArray();
+     * expect(y.length).toEqual(0);
+     */
+    toErrArray(): E[] {
+        if (this.isErr()) {
+            return [this.err!];
+        }
+
+        return [];
     }
 
     /**

@@ -21,6 +21,38 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
         return new AsyncResult(Promise.resolve(err).then(Result.err));
     }
 
+    /**
+     * `try: (() -> Promise<A>) -> AsyncResult<A, Error>`
+     *
+     * ---
+     * @param fn function that might throw.
+     * @returns `AsyncResult<A, Error>` with the caught `Error` if it was thrown.
+     *
+     * Note: If anything other than an `Error` is thrown, will create a new `Error` and stringify the thrown value in the message.
+     *
+     * @example
+     * const a = await AsyncResult.try(async () => { throw new Error("oh no") });
+     * expect(a.err).toBeInstanceOf(Error);
+     * expect(a.err?.message).toEqual("oh no");
+     *
+     * const b = await AsyncResult.try(async () => { throw "oops" });
+     * expect(b.err).toBeInstanceOf(Error);
+     * expect(b.err?.message).toEqual("oops");
+     */
+    static try<A>(fn: () => Promise<A>): AsyncResult<A, Error> {
+        const stringify = (e: unknown) =>
+            typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
+
+        const catcher = (e: unknown) =>
+            Result.err(e instanceof Error ? e : new Error(stringify(e)));
+
+        const x: Promise<Result<A, Error>> = fn()
+            .then(Result.ok)
+            .catch(catcher);
+
+        return AsyncResult.from(x);
+    }
+
     then<TResult1 = Result<A, E>, TResult2 = never>(
         onfulfilled?:
             | ((value: Result<A, E>) => TResult1 | PromiseLike<TResult1>)

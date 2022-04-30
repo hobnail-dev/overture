@@ -1,4 +1,3 @@
-import { AsyncResult } from "./asyncResult";
 import { Err, Ok, Result, result } from "./result";
 
 describe("Result", () => {
@@ -37,26 +36,16 @@ describe("Result", () => {
             expect(x.err?.name).toEqual("Error");
             expect(x.err?.message).toEqual("oh no");
         });
-    });
 
-    describe("::tryAsync", () => {
-        it("Creates an Ok AsyncResult from an async function that might throw but didn't", async () => {
-            const x = Result.tryAsync(async () => "didnt throw");
-            expect(x).toBeInstanceOf(AsyncResult);
-
-            const y = await x;
-            expect(y.val).toEqual("didnt throw");
-        });
-
-        it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
-            const x = Result.tryAsync(async () => {
-                throw new Error("oh no");
+        it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
+            const x = Result.try(() => {
+                // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                throw "oops";
             });
-            expect(x).toBeInstanceOf(AsyncResult);
 
-            const y = await x;
-            expect(y.err?.name).toEqual("Error");
-            expect(y.err?.message).toEqual("oh no");
+            expect(x.err).toBeInstanceOf(Error);
+            expect(x.err?.name).toEqual("Error");
+            expect(x.err?.message).toEqual("oops");
         });
     });
 
@@ -270,6 +259,28 @@ describe("Result", () => {
         it("pipes the Result instance to a function", () => {
             const res = Ok(1).to(x => x.val);
             expect(res).toEqual(1);
+        });
+    });
+
+    describe(".toArray()", () => {
+        it("returns the Result<A, E> as Array<A>", () => {
+            const arr = Ok("one").toArray();
+            expect(arr.length).toEqual(1);
+            expect(arr[0]).toEqual("one");
+
+            const empty = Err<number, string>("oops").toArray();
+            expect(empty.length).toEqual(0);
+        });
+    });
+
+    describe(".toErrArray()", () => {
+        it("returns the Result<A, E> as Array<E>", () => {
+            const arr = Err("one").toErrArray();
+            expect(arr.length).toEqual(1);
+            expect(arr[0]).toEqual("one");
+
+            const empty = Ok<number, string>(1).toErrArray();
+            expect(empty.length).toEqual(0);
         });
     });
 
