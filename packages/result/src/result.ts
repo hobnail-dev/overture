@@ -6,6 +6,7 @@ import { AsyncResult } from "./asyncResult";
  */
 export class Result<A, E> {
     private constructor(
+        private readonly _isOk: boolean,
         /**
          * The raw `Ok` value inside the `Result<A, E>`.
          */
@@ -31,8 +32,11 @@ export class Result<A, E> {
      * expect(x).toBeInstanceOf(Result);
      * expect(x.isOk()).toBe(true)
      */
-    static ok<A, E = never>(value: A): Result<A, E> {
-        return new Result(value);
+    static ok<A = void, E = never>(value?: A): Result<A, E> {
+        if (arguments.length === 0)
+            return new Result(true, (() => {})()) as any;
+
+        return new Result(true, value);
     }
 
     /**
@@ -47,7 +51,7 @@ export class Result<A, E> {
      * expect(x.isErr()).toBe(true)
      */
     static err<A = never, E = never>(error: E): Result<A, E> {
-        return new Result(undefined, error) as any;
+        return new Result(false, undefined, error) as any;
     }
 
     /**
@@ -95,8 +99,7 @@ export class Result<A, E> {
      * expect(val.isOk()).toBe(true);
      */
     isOk(): boolean {
-        // Double equality used here since it treats null and undefined the same.
-        return !(this.val == null);
+        return this._isOk;
     }
 
     /**
@@ -130,8 +133,7 @@ export class Result<A, E> {
      * expect(val.isErr()).toBe(true);
      */
     isErr(): boolean {
-        // Double equality used here since it treats null and undefined the same.
-        return !(this.err == null);
+        return !this._isOk;
     }
 
     /**
@@ -302,6 +304,7 @@ export class Result<A, E> {
     trace(): Result<A, E> {
         if (this.isErr()) {
             return new Result(
+                this._isOk,
                 this.val,
                 this.err,
                 new Error().stack?.replace("Error", "Err")
@@ -763,13 +766,33 @@ export class Result<A, E> {
     }
 
     /**
+     * `this: Result<A, E>`
+     *
+     * `collectNullable: A -> B | null | undefined`
+     *
+     * ---
+     */
+    collectNullable<B>(
+        fn: (a: A) => B | null | undefined
+    ): Result<B, E> | null | undefined {
+        if (this.isErr()) {
+            return this as any;
+        }
+
+        const x = fn(this.val!);
+        if (x == null) return x as any;
+
+        return Result.ok(x);
+    }
+
+    /**
      * `transposePromise: Result<Promise<A>, E> -> Promise<Result<A, E>>`
      *
      * ---
      */
     static transposePromise = <A, E>(
-        ro: Result<Promise<A>, E>
-    ): Promise<Result<A, E>> => ro.collectPromise(x => x);
+        rp: Result<Promise<A>, E>
+    ): Promise<Result<A, E>> => rp.collectPromise(x => x);
 
     /**
      * `transposeArray: Result<Array<A>, E> -> Array<Result<A, E>>`
@@ -777,8 +800,17 @@ export class Result<A, E> {
      * ---
      */
     static transposeArray = <A, E>(
-        ro: Result<Array<A>, E>
-    ): Array<Result<A, E>> => ro.collectArray(x => x);
+        ra: Result<Array<A>, E>
+    ): Array<Result<A, E>> => ra.collectArray(x => x);
+
+    /**
+     * `transposeNullable: Result<A | null | undefined, E> -> Result<A, E> | null | undefined`
+     *
+     * ---
+     */
+    static transposeNullable = <A, E>(
+        ro: Result<A | null | undefined, E>
+    ): Result<A, E> | null | undefined => ro.collectNullable(x => x);
 
     /**
      * `flatten: Result<Result<A, E>, F> -> Result<A, E | F>`
