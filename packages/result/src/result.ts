@@ -1,3 +1,5 @@
+import { AsyncResult } from "./asyncResult";
+
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
  * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
@@ -535,6 +537,17 @@ export class Result<A, E> {
         }
 
         return [];
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `toAsyncResult: () -> AsyncResult<A, E>`
+     *
+     * ---
+     */
+    toAsyncResult(): AsyncResult<A, E> {
+        return AsyncResult.fromResult(this);
     }
 
     /**

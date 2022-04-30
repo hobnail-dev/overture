@@ -1,3 +1,4 @@
+import { AsyncResult } from "./asyncResult";
 import { Err, Ok, Result, result } from "./result";
 
 describe("Result", () => {
@@ -281,6 +282,16 @@ describe("Result", () => {
 
             const empty = Ok<number, string>(1).toErrArray();
             expect(empty.length).toEqual(0);
+        });
+    });
+
+    describe(".toAsyncResult()", () => {
+        it("returns the Result<A, E> as a AsyncResult<A, E>", async () => {
+            const x = Ok(1).toAsyncResult();
+            expect(x).toBeInstanceOf(AsyncResult);
+
+            const y = await x;
+            expect(y.val).toEqual(1);
         });
     });
 
