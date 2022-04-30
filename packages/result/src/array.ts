@@ -34,11 +34,11 @@ declare global {
          * 
          * const a = ["1", "2", "3"].collectAsyncResult(parseNumAsync);
          * expect(a).toBeInstanceOf(AsyncResult);
-         * expect((await a.unwrap())).toEqual([1, 2, 3])
+         * expect(await a.unwrap()).toEqual([1, 2, 3])
          * 
          * const b = ["1", "bla", "2", "ble"].collectAsyncResult(parseNumAsync);
          * expect(b).toBeInstanceOf(AsyncResult);
-         * expect((await b.unwrapErr())).toEqual("bla: not a number");
+         * expect(await b.unwrapErr()).toEqual("bla: not a number");
          */
         collectAsyncResult<A, E>(
             fn: (t: T) => AsyncResult<A, E>
@@ -55,11 +55,11 @@ declare global {
          * 
          * const a = ["1", "2", "3"].collectAsyncResult(parseNumAsync);
          * expect(a).toBeInstanceOf(AsyncResult);
-         * expect((await a.unwrap())).toEqual([1, 2, 3])
+         * expect(await a.unwrap()).toEqual([1, 2, 3])
          * 
          * const b = ["1", "bla", "2", "ble"].collectAsyncResult(parseNumAsync);
          * expect(b).toBeInstanceOf(AsyncResult);
-         * expect((await b.unwrapErr())).toEqual("bla: not a number");
+         * expect(await b.unwrapErr()).toEqual("bla: not a number");
          */
         collectAsyncResult<A, E>(
             fn: (t: T) => Promise<Result<A, E>>
@@ -105,13 +105,13 @@ declare global {
          * const b: AsyncResult<Array<A>, E> = Array.tranposeAsyncResult(a);
          *
          * expect(b).toBeInstanceOf(AsyncResult);
-         * expect((await b.unwrap())).toEqual([1, 2, 3])
+         * expect(await b.unwrap()).toEqual([1, 2, 3])
          *
          * const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
          * const d = Array.tranposeAsyncResult(c);
          *
          * expect(d).toBeInstanceOf(AsyncResult);
-         * expect((await d.unwrapErr())).toEqual("bla: not a number");
+         * expect(await d.unwrapErr()).toEqual("bla: not a number");
          */
         transposeAsyncResult<A, E>(
             results: Array<AsyncResult<A, E>>
@@ -130,13 +130,13 @@ declare global {
          * const b: AsyncResult<Array<A>, E> = Array.tranposeAsyncResult(a);
          *
          * expect(b).toBeInstanceOf(AsyncResult);
-         * expect((await b.unwrap())).toEqual([1, 2, 3])
+         * expect(await b.unwrap()).toEqual([1, 2, 3])
          *
          * const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
          * const d = Array.tranposeAsyncResult(c);
          *
          * expect(d).toBeInstanceOf(AsyncResult);
-         * expect((await d.unwrapErr())).toEqual("bla: not a number");
+         * expect(await d.unwrapErr()).toEqual("bla: not a number");
          */
         transposeAsyncResult<A, E>(
             results: Array<Promise<Result<A, E>>>

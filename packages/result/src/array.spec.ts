@@ -96,4 +96,24 @@ describe("Array", () => {
             expect(actual.err).toEqual("not even");
         });
     });
+
+    describe("::partitionResults()", () => {
+        it("Paritions an Array of Results into a tuple with the Oks and the Errs", () => {
+            const arr = [Ok(1), Ok(2), Err("oops")];
+            const [oks, errs] = Array.partitionResults(arr);
+
+            expect(oks).toEqual([1, 2]);
+            expect(errs).toEqual(["oops"]);
+        });
+    });
+
+    describe("::partitionAsyncResults()", () => {
+        it("Paritions an Array of AsyncResults into a tuple with the Oks and the Errs", async () => {
+            const arr = [AsyncOk(1), AsyncOk(2), AsyncErr("oops")];
+            const [oks, errs] = await Array.partitionAsyncResults(arr);
+
+            expect(oks).toEqual([1, 2]);
+            expect(errs).toEqual(["oops"]);
+        });
+    });
 });
