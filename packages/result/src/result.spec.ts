@@ -268,6 +268,58 @@ describe("Result", () => {
         });
     });
 
+    describe(".or", () => {
+        it("returns the this Result instance if it is Ok", () => {
+            const a = Ok(2);
+            const b = Err("later error");
+            expect(a.or(b).unwrap()).toEqual(2);
+        });
+
+        it("Returns the arg Result instance if the called one is Err", () => {
+            const c: Result<number, string> = Err("early error");
+            const d = Ok(2);
+            expect(c.or(d).unwrap()).toEqual(2);
+        });
+
+        it("When both Results are Err, returns the arg one", () => {
+            const e = Err("early error");
+            const f = Err("late error");
+            expect(e.or(f).unwrapErr()).toEqual("late error");
+        });
+
+        it("When both Results are Ok, returns the this instance", () => {
+            const x = Ok(2);
+            const y = Ok(100);
+            expect(x.or(y).unwrap()).toEqual(2);
+        });
+    });
+
+    describe(".orElse", () => {
+        it("returns the this Result instance if it is Ok", () => {
+            const a = Ok(2);
+            const b = (x: number) => Err(x * 2);
+            expect(a.orElse(b).unwrap()).toEqual(2);
+        });
+
+        it("Returns the arg fn Result if the called one is Err", () => {
+            const c: Result<number, number> = Err(10);
+            const d = (x: number) => Ok(x * 2);
+            expect(c.orElse(d).unwrap()).toEqual(20);
+        });
+
+        it("When both Result and arg returns Err, returns the arg one", () => {
+            const e = Err(1);
+            const f = (x: number) => Err(x + 1);
+            expect(e.orElse(f).unwrapErr()).toEqual(2);
+        });
+
+        it("When both Result and arg returns Ok, returns the this instance", () => {
+            const x = Ok(3);
+            const y = (x: number) => Ok(x * 100);
+            expect(x.orElse(y).unwrap()).toEqual(3);
+        });
+    });
+
     describe(".contains", () => {
         it("Returns true if Result is an Ok containing given value", () => {
             const a = Ok(2);

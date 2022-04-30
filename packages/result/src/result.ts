@@ -459,13 +459,13 @@ export class Result<A, E> {
      * @returns the tupled values of the two `Result`s if they are all `Ok`, otherwise returns this `Err` or `r`'s `Err`.
      * @example
      * const x = Ok("hello").and(Ok(10));
-     * expect(x.val).toEqual(["hello", 10]);
+     * expect(x.unwrap()).toEqual(["hello", 10]);
      *
      * const y = Err("oops").and(Err("oh no"));
-     * expect(y.err).toEqual("oops");
+     * expect(y.unwrapErr()).toEqual("oops");
      *
      * const z = Ok(1).and(Err("fatal"));
-     * expect(z.err).toEqual("fatal");
+     * expect(z.unwrapErr()).toEqual("fatal");
      */
     and<B, F>(r: Result<B, F>): Result<[A, B], E | F> {
         if (this.isOk()) {
@@ -477,6 +477,72 @@ export class Result<A, E> {
         }
 
         return this as any;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `or: Result<A, F> -> Result<A, E | F>`
+     *
+     * ---
+     * @param r `Result` to be returned if `this` is `Err`.
+     * @returns `r` if `this` result is `Err`, otherwise returns `this`.
+     * @example
+     * const a = Ok(2);
+     * const b = Err("later error");
+     * expect(a.or(b).unwrap()).toEqual(2);
+     *
+     * const c = Err("early error");
+     * const d = Ok(2);
+     * expect(c.or(d).unwrap()).toEqual(2);
+     *
+     * const e = Err("early error");
+     * const f = Err("late error");
+     * expect(e.or(f).unwrapErr()).toEqual("late error");
+     *
+     * const x = Ok(2);
+     * const y = Ok(100);
+     * expect(x.or(y).unwrap()).toEqual(2);
+     */
+    or<F>(r: Result<A, F>): Result<A, E | F> {
+        if (this.isOk()) {
+            return this;
+        }
+
+        return r;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `orElse: (E -> Result<A, F>) -> Result<A, E | F>`
+     *
+     * ---
+     * @param fn `Result` returning callback
+     * @returns return value from `fn` if `this` result is `Err`, otherwise returns `this`.
+     * @example
+     * const a = Ok(2);
+     * const b = (x: number) => Err(x * 2);
+     * expect(a.orElse(b).unwrap()).toEqual(2);
+     *
+     * const c = Err(10);
+     * const d = (x: number) => Ok(x * 2);
+     * expect(c.orElse(d).unwrap()).toEqual(20);
+     *
+     * const e = Err(1);
+     * const f = (x: number) => Err(x + 1);
+     * expect(e.orElse(f).unwrapErr()).toEqual(2);
+     *
+     * const x = Ok(3);
+     * const y = (x: number) => Ok(x * 100);
+     * expect(x.or(y).unwrap()).toEqual(3);
+     */
+    orElse<F>(fn: (e: E) => Result<A, F>): Result<A, E | F> {
+        if (this.isOk()) {
+            return this;
+        }
+
+        return fn(this.err!);
     }
 
     /**
