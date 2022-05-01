@@ -83,4 +83,4 @@ Much nicer right?
 >
 >So unlike *Rust*, the return type of `divide100` is actually `Result<number, InputError | ParseError | DivError>`.
 
-Head on over to [Quick Start](result/quickstart.md) to learn how to use the library if your interested was piqued :-)
+Head on over to [Quick Start](result/quickstart.md#quick-start) to learn how to use the library if your interested was piqued :-)
