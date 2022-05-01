@@ -1,14 +1,27 @@
 {
     "name": "@hobnail/result",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "description": "Better Error handling in TypeScript.",
     "license": "MIT",
+    "author": {
+        "name": "Victor Ferreira Menge",
+        "email": "vfmenge@gmail.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/hobnail-dev/overture.git"
+    },
+    "files": [
+        "dist"
+    ],
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "test": "jest",
+        "build": "tsc --project tsconfig.build.json"
+    },
     "devDependencies": {
         "@types/jest": "^27.4.1",
         "jest": "^27.5.1",
         "ts-jest": "^27.1.4"
-    },
-    "scripts": {
-        "test": "jest"
     }
 }

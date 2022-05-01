@@ -81,6 +81,6 @@ divide100(50)
 Much nicer right?
 >One cool thing that the *TypeScript* type system allows us to do is accumulate the error types. 
 >
->So unlike *Rust*, the return type of `divide100` is actually `Result<void, InputError | ParseError | DivError>`.
+>So unlike *Rust*, the return type of `divide100` is actually `Result<number, InputError | ParseError | DivError>`.
 
 Head on over to [Quick Start](result/quickstart.md) to learn how to use the library if your interested was piqued :-)
