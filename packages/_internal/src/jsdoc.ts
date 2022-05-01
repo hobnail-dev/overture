@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 
+// TODO: Clean this mess
 export namespace JsDoc {
     export type Header = {
         instance?: string;
@@ -16,7 +17,7 @@ export namespace JsDoc {
     };
 
     const clean = (str: string): string => {
-        const artifactsRegxp = /(\/\*|\*\/|\*)/g;
+        const artifactsRegxp = /(\/\*\*|\*\/)/gm;
 
         return str.replace(artifactsRegxp, "");
     };
@@ -26,7 +27,10 @@ export namespace JsDoc {
     const parseHeader = (str: string[]): Header => {
         const header: Partial<Header> = {};
 
-        for (const s of str.map(x => x.replace(/`/g, ""))) {
+        const lines = str.map(x => x.replace(/(^\s*\*\s*|`)/g, ""));
+        for (const s of lines) {
+            if (s.trim().length === 0) continue;
+
             if (s.startsWith("this:")) {
                 header.instance = s.replace("this: ", "");
                 continue;
@@ -53,23 +57,32 @@ export namespace JsDoc {
         const titleRegxp = /@\w+/;
         let currKey: keyof Body = "description";
 
-        for (const s of str) {
-            const key = s.match(titleRegxp)?.at(0)?.replace("@", "") ?? "";
-            if (Object.keys(body).includes(key)) currKey = key as keyof Body;
+        let whitespaces = 0;
 
-            const line = s.replace(titleRegxp, "").trim();
+        const lines = str.map(x => x.replace(/^\s*\*/, ""));
+        for (const s of lines) {
+            const key = s.match(titleRegxp)?.at(0)?.replace("@", "") ?? "";
+            if (Object.keys(body).includes(key)) {
+                whitespaces = s.search(/\S/);
+                currKey = key as keyof Body;
+            }
+
+            const line = s.replace(titleRegxp, "");
             if (line.length === 0 && currKey !== "example") continue;
 
-            body[currKey]!.push(line);
+            body[currKey]!.push(line.slice(whitespaces));
         }
 
-        if (body.example?.at(0)?.length === 0) {
+        while (body.example?.at(0)?.trim()?.length === 0) {
             body.example.shift();
         }
 
-        if (body.example?.at(-1)?.length === 0) {
+        while (body.example?.at(-1)?.trim()?.length === 0) {
             body.example.pop();
         }
+
+        body.description = body.description.map(x => x.trim());
+        body.returns = body.returns.map(x => x.trim());
 
         return body;
     };
@@ -85,8 +98,7 @@ export namespace JsDoc {
 
         const header = parseHeader(headerLines);
 
-        const bodyLines = rawBody?.split("\n")?.map(cleanLines) ?? [];
-
+        const bodyLines = rawBody?.split("\n") ?? [];
         const body = parseBody(bodyLines);
 
         return { header, body };
