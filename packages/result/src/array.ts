@@ -68,7 +68,7 @@ declare global {
 
     interface ArrayConstructor {
         /**
-         * `tranposeResult: Array<Result<A, E>> -> Result<Array<A>, E>`
+         * `transposeResult: Array<Result<A, E>> -> Result<Array<A>, E>`
          *
          * ---
          * Iterates over the `Array`, stopping as soon as a `Result` that is an `Err` is found.
@@ -77,13 +77,13 @@ declare global {
          * declare function parseNum(x: string): Result<number, string>;
          *
          * const a: Array<Result<number, string>> = ["1", "2", "3"].map(parseNum);
-         * const b: Result<Array<A>, E> = Array.tranposeResult(a);
+         * const b: Result<Array<A>, E> = Array.transposeResult(a);
          *
          * expect(b).toBeInstanceOf(AsyncResult);
          * expect(b.unwrap()).toEqual([1, 2, 3])
          *
          * const c = ["1", "bla", "2", "ble"].map(parseNum);
-         * const d = Array.tranposeResult(c);
+         * const d = Array.transposeResult(c);
          *
          * expect(d).toBeInstanceOf(Result);
          * expect(d.unwrapErr()).toEqual("bla: not a number");
@@ -102,13 +102,13 @@ declare global {
          * declare function parseNumAsync(x: string): AsyncResult<number, string>;
          *
          * const a: Array<AsyncResult<number, string>> = ["1", "2", "3"].map(parseNumAsync);
-         * const b: AsyncResult<Array<A>, E> = Array.tranposeAsyncResult(a);
+         * const b: AsyncResult<Array<A>, E> = Array.transposeAsyncResult(a);
          *
          * expect(b).toBeInstanceOf(AsyncResult);
          * expect(await b.unwrap()).toEqual([1, 2, 3])
          *
          * const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
-         * const d = Array.tranposeAsyncResult(c);
+         * const d = Array.transposeAsyncResult(c);
          *
          * expect(d).toBeInstanceOf(AsyncResult);
          * expect(await d.unwrapErr()).toEqual("bla: not a number");
@@ -127,13 +127,13 @@ declare global {
          * declare function parseNumAsync(x: string): Promise<Result<number, string>>;
          *
          * const a: Array<Promise<Result<number, string>>> = ["1", "2", "3"].map(parseNumAsync);
-         * const b: AsyncResult<Array<A>, E> = Array.tranposeAsyncResult(a);
+         * const b: AsyncResult<Array<A>, E> = Array.transposeAsyncResult(a);
          *
          * expect(b).toBeInstanceOf(AsyncResult);
          * expect(await b.unwrap()).toEqual([1, 2, 3])
          *
          * const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
-         * const d = Array.tranposeAsyncResult(c);
+         * const d = Array.transposeAsyncResult(c);
          *
          * expect(d).toBeInstanceOf(AsyncResult);
          * expect(await d.unwrapErr()).toEqual("bla: not a number");
