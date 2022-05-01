@@ -185,7 +185,7 @@ const handleErr = (e: InputError | ParseError | DivError): void =>
     // error handling...
     // needs to return same type as the success handling function!
 
-divide100(50).matchOrElse(handleErr, handleOk);
+divide100(50).mapOrElse(handleErr, handleOk);
 ```
 
 ### More
@@ -220,7 +220,7 @@ const getPokemonPower = (): AsyncResult<number, InputError | ParseError | FetchE
     });
 
 
-const power = await getPokemonPower().matchOrElse(
+const power = await getPokemonPower().mapOrElse(
     err => `There was an error: ${err}`,
     pow => `Power is: ${pow}`
 );

@@ -70,7 +70,7 @@ const divide100 = () =>
     });
 
 divide100(50)
-    .matchOrElse(
+    .mapOrElse(
         // could also have logic here to deal with each individual case
         err => console.log(`We had an error ${err}!`), 
         val => console.log(`100 divided by 50 is ${val}!`);
