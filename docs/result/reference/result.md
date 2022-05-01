@@ -1,14 +1,87 @@
-COOL TEMPLATE
+# Result
+`Result<A, E>` is the type used for returning and propagating errors.
+It can either be `Ok`, representing success and containing a value of type `A`, or an `Err`, representing an error and containing a value of type `E`.
+
+> `function` functions without any prefix are loose functions imported directly from the module.
+>
+> `.function` functions / fields starting with `.` are instance functions / fields. 
+>
+> `::function` functions starting with `::` are static functions.
+
+> ### Important!
+> `Result` returning functions must **always** specify their return value. If you forget to, *TypeScript* will infer the returng type incorrectly.
+## Ok 
+
+<span class="sig">`A -> Result<A, E>`</span>
+
+Returns a `Result<A, E>` that represents a success.
+##### example
+
+```ts
+const x = Ok(3);
+
+expect(x).toBeInstanceOf(Result);
+expect(x.isOk()).toBe(true)
+
+```
+## Err 
+
+<span class="sig">`E -> Result<A, E>`</span>
+
+Returns a `Result<A, E>` that represents an error.
+##### example
+
+```ts
+const x = Err("oops");
+
+expect(x).toBeInstanceOf(Result);
+expect(x.isErr()).toBe(true)
+
+```
+## result 
+
+<span class="sig">`Error Propagation`</span>
+
+Allows easy propagation of errors using the `yield*` keyword.
+
+The `yield*` keyword when called will only continue the further exection of the function if the `Result` is `Ok`. If the `Result` is `Err`, the `yield*` forces the function to return early with the `Err` value.
+##### example
+
+```ts
+declare function getQueryParam(query: string): Result<string, QueryErr>;
+declare function parseId(str: string): Result<number, ParseErr>;
+declare function findUser(id: int): Result<user, UserNotFoundErr>;
+
+const x: Result<User, QueryErr | ParseErr | UserNotFoundErr> =
+  result(function* () {
+    const idParam: string = yield* getQueryParam("&id=5");
+    const id: number = yield* parseId(idParam);
+    const user: User = yield* findUser(id);
+
+    return user;
+  });
+
+// without yield*:
+const y = (() => {
+  const idParam = getQueryParam("&id=5");
+  if (idParam.isErr()) return idParam;
+
+  const id = parseId(idParam.unwrap());
+  if (id.isErr()) return id;
+
+  const user = findUser(id.unwrap());
+  if (user.isErr()) return user;
+
+  return user.unwrap().name;
+})();
+
+```
 ## ::ok 
 
-#### signature 
+<span class="sig">`A -> Result<A, E>`</span>
 
-`A -> Result<A, E>`
-
-#### returns
-
-a `Result<A, E>` that represents a success.
-#### example
+Returns a `Result<A, E>` that represents a success.
+##### example
 
 ```ts
 const x = Result.ok(3);
@@ -19,14 +92,10 @@ expect(x.isOk()).toBe(true)
 ```
 ## ::err 
 
-#### signature 
+<span class="sig">`E -> Result<A, E>`</span>
 
-`E -> Result<A, E>`
-
-#### returns
-
-a `Result<A, E>` that represents an error.
-#### example
+Returns a `Result<A, E>` that represents an error.
+##### example
 
 ```ts
 const x = Result.err("oops");
@@ -37,45 +106,124 @@ expect(x.isErr()).toBe(true)
 ```
 ## ::try 
 
-#### signature 
+<span class="sig">`(T extends string, () -> A) -> Result<A, Exn<T>>`</span>
 
-`(() -> A) -> Result<A, Error>`
+Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
 
-#### params
-
-`fn` function that might throw.
-
-#### returns
-
-`Result<A, Error>` with the caught `Error` if it was thrown.
-
-Note: If anything other than an `Error` is thrown, will create a new `Error` and stringify the thrown value in the message.
-#### example
+Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
+##### example
 
 ```ts
-const a = Result.try(() => { throw new Error("oh no") });
-expect(a.err).toBeInstanceOf(Error);
-expect(a.err?.message).toEqual("oh no");
+const a: Result<number, Exn<"MyExnTypeName">> =
+Result.try("MyExnTypeName", () => {
+  if (true) throw new Error("oh no")
+  else return 1;
+});
+expect(a.unwrapErr().type).toEqual("MyExnTypeName");
+expect(a.unwrapErr().message).toEqual("oh no");
 
-const b = Result.try(() => { throw "oops" });
-expect(b.err).toBeInstanceOf(Error);
-expect(b.err?.message).toEqual("oops");
+const b = Result.try("Panic!", () => { throw "oops" });
+expect(b.unwrapErr().type).toEqual("Panic!");
+expect(b.unwrapErr().message).toEqual("oops");
+
+```
+## ::transposePromise 
+
+<span class="sig">`Result<Promise<A>, E> -> AsyncResult<A, E>`</span>
+
+Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
+##### example
+
+```ts
+declare getPokemon(id: number): Promise<Pokemon>;
+declare parseId(str: string): Result<number, string>;
+
+const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
+const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+
+```
+## ::transposeNullable 
+
+<span class="sig">`Result<A | null | undefined, E> -> Result<A, E> | null | undefined`</span>
+
+Tranposes a `Result<A | null | undefined, E>` into a `Result<A, E> | null | undefined`.
+##### example
+
+```ts
+const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
+const x: Result<number | null, string> = Ok(3).map(evenOrNull);
+const y: Result<number, string> | null | undefined = Result.tranposeNullable(x);
+
+```
+## ::flatten 
+
+<span class="sig">`Result<Result<A, E>, F> -> Result<A, E | F>`</span>
+
+Converts from `Result<Result<A, E>, F>` to a `Result<A, E | F>`.
+##### example
+
+```ts
+const x = Result.flatten(Ok(Ok(3)));
+expect(x.unwrap()).toEqual(3);
+
+const y = Result.flatten(Ok(Err("oops")));
+expect(y.unwrapErr()).toEqual("oops");
+
+```
+## .val 
+
+<span class="sig">`A | undefined`</span>
+
+The raw `Ok` value inside the `Result<A, E>`.
+##### example
+
+```ts
+const x = Ok(3);
+expect(x.val).toEqual(3);
+
+const y = Err("oops");
+expect(y.val).toBeUndefined();
+
+```
+## .err 
+
+<span class="sig">`E | undefined`</span>
+
+The raw `Err` value, inside the `Result<A, E>`.
+##### example
+
+```ts
+const x = Err(3);
+expect(x.err).toEqual(3);
+
+const y = Ok("hello");
+expect(y.err).toBeUndefined();
+
+```
+## .stack 
+
+<span class="sig">`string | undefined`</span>
+
+`Err` stack trace. Is only present if the `Result` is `Err` and has had the stack trace added to it with `.trace()`.
+##### example
+
+```ts
+const a = Ok(3);
+expect(a.stack).toBeUndefined();
+
+const b = Err("oops");
+exepct(b.stack).toBeUndefined();
+
+const c = Err("oh no").trace();
+expect(c.stack).toBeDefined();
 
 ```
 ## .isOk 
 
-#### signature 
+<span class="sig">`() -> boolean`</span>
 
-`() -> boolean`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-`true` if the `Result<A, E>` is Ok.
-#### example
+Returns `true` if the `Result<A, E>` is Ok.
+##### example
 
 ```ts
 const val = Ok(5);
@@ -84,18 +232,10 @@ expect(val.isOk()).toBe(true);
 ```
 ## .isOkWith 
 
-#### signature 
+<span class="sig">`A -> boolean`</span>
 
-`A -> boolean`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-`true` if the `Result<A, E>` is `Ok` and contains a value matching the predicate's return value.
-#### example
+Returns `true` if the `Result<A, E>` is `Ok` and contains a value matching the predicate's return value.
+##### example
 
 ```ts
 const val = Ok(4);
@@ -104,18 +244,10 @@ expect(val.isOkWith(x => x % 2 === 0)).toBe(true);
 ```
 ## .isErr 
 
-#### signature 
+<span class="sig">`() -> boolean`</span>
 
-`() -> boolean`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-`true` if the `Result<A, E>` contains an Err.
-#### example
+Returns `true` if the `Result<A, E>` contains an Err.
+##### example
 
 ```ts
 const val = Err("oh no!");
@@ -124,18 +256,10 @@ expect(val.isErr()).toBe(true);
 ```
 ## .isErrWith 
 
-#### signature 
+<span class="sig">`E -> boolean`</span>
 
-`E -> boolean`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-`true` if the `Result<A, E>` is contains an `Err` matching the predicate.
-#### example
+Returns `true` if the `Result<A, E>` is contains an `Err` matching the predicate.
+##### example
 
 ```ts
 const val = Err("oh no!");
@@ -144,22 +268,14 @@ expect(val.isErrWith(x => x.length > 0)).toBe(true);
 ```
 ## .unwrap 
 
-#### signature 
+<span class="sig">`() -> A`</span>
 
-`() -> A`
+Returns the contained Ok value.
 
-#### this
+##### throws
 
-`Result<A, E>`
-
-#### throws
-
-if `Result<A, E>` is an Err.
-
-#### returns
-
-the contained Ok value.
-#### example
+ if `Result<A, E>` is an Err.
+##### example
 
 ```ts
 const x = Ok(1);
@@ -171,22 +287,10 @@ expect(() => y.unwrap()).toThrow(new Error("oops"));
 ```
 ## .unwrapOr 
 
-#### signature 
+<span class="sig">`A -> A`</span>
 
-`A -> A`
-
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`a` default value to return if `this` is `Err`.
-
-#### returns
-
-the contained `Ok` value or `a`.
-#### example
+Returns the contained `Ok` value or the default value passed as an argument.
+##### example
 
 ```ts
 const x = Ok(9).or(2);
@@ -198,22 +302,10 @@ expect(y).toEqual(2);
 ```
 ## .unwrapOrElse 
 
-#### signature 
+<span class="sig">`(E -> A) -> A`</span>
 
-`(E -> A) -> A`
-
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`fn` callback returning a default value to be used if `this` is `Err`.
-
-#### returns
-
-the contained `Ok` value or the return value from `fn`.
-#### example
+Returns the contained `Ok` value or the return value from `E -> A`.
+##### example
 
 ```ts
 const count = (x: string) => x.length;
@@ -227,22 +319,14 @@ expect(b).toEqual(3);
 ```
 ## .unwrapErr 
 
-#### signature 
+<span class="sig">`() -> E`</span>
 
-`() -> E`
+Returns the `Err` value contained inside the `Result<A, E>`.
 
-#### this
+##### throws
 
-`Result<A, E>`
-
-#### throws
-
-an Error if the `Result<A, E>` is `Ok`.
-
-#### returns
-
-the `Err` value contained inside the `Result<A, E>`.
-#### example
+ an Error if the `Result<A, E>` is `Ok`.
+##### example
 
 ```ts
 const x = Err("oops");
@@ -254,26 +338,14 @@ expect (() => y.unwrapErr()).toThrow();
 ```
 ## .expect 
 
-#### signature 
+<span class="sig">`string -> A`</span>
 
-`string -> A`
+Returns the contained `Ok` value.
 
-#### this
+##### throws
 
-`Result<A, E>`
-
-#### throws
-
-if the value is an `Err`, with the message param and the content of the `Err`.
-
-#### params
-
-`msg` error message to be displayed when error is thrown.
-
-#### returns
-
-the contained `Ok` value.
-#### example
+ if the value is an `Err`, with the string argument as the message of the `Error`.
+##### example
 
 ```ts
 const x = Err("oh no!");
@@ -282,26 +354,14 @@ x.expect("Testing expect"); // throws Error with message 'Testing expect: oh no!
 ```
 ## .expectErr 
 
-#### signature 
+<span class="sig">`string -> E`</span>
 
-`string -> E`
+Returns the contained `Err` value.
 
-#### this
+##### throws
 
-`Result<A, E>`
-
-#### throws
-
-if the value is an `Ok`, with the message param and the content of the `Ok`.
-
-#### params
-
-`msg` error message to be displayed when error is thrown.
-
-#### returns
-
-the contained `Err` value.
-#### example
+ an `Error` with the given string and the `Ok` value as a message if `this` is `Ok`.
+##### example
 
 ```ts
 const x = Ok(10);
@@ -310,94 +370,64 @@ x.expectErr("Testing expectErr"); // throws Error with message 'Testing expectEr
 ```
 ## .trace 
 
-#### signature 
-
-`() -> Result<A, E>`
-
-#### this
-
-`Result<A, E>`
+<span class="sig">`() -> Result<A, E>`</span>
 
 Adds a stack trace to the `Result` if it is an `Err`.
+##### example
 
+```ts
+const a = Ok(3);
+expect(a.stack).toBeUndefined();
+
+const b = Err("oops");
+exepct(b.stack).toBeUndefined();
+
+const c = Err("oh no").trace();
+expect(c.stack).toBeDefined();
+
+```
 ## .map 
 
-#### signature 
-
-`(A -> B) -> Result<B, E>`
-
-#### this
-
-`Result<A, E>`
+<span class="sig">`(A -> B) -> Result<B, E>`</span>
 
 Evaluates the given function against the `A` value of `Result<A, E>` if it is `Ok`.
 
-#### params
-
-`fn` mapping function.
-
-#### returns
-
-The resulting value of the mapping function wrapped in a `Result`.
-#### example
+Returns the resulting value of the mapping function wrapped in a `Result`.
+##### example
 
 ```ts
-const x = Ok(5).map(x => x  2);
+const x = Ok(5).map(x => x * 2);
 expect(x.unwrap()).toEqual(10);
 
-const y = Err("oops").map(x => x  2);
+const y = Err("oops").map(x => x * 2);
 expect(() => y.unwrap()).toThrow();
 expect(y.unwrapErr()).toEqual("oops");
 
 ```
 ## .mapErr 
 
-#### signature 
-
-`(E -> F) -> Result<A, F>`
-
-#### this
-
-`Result<A, E>`
+<span class="sig">`(E -> F) -> Result<A, F>`</span>
 
 Evaluates the given function against the `E` value of `Result<A, E>` if it is an `Err`.
 
-#### params
-
-`fn` mapping function.
-
-#### returns
-
-The resulting value of the mapping function wrapped in a `Result`.
-#### example
+Returns the resulting value of the mapping function wrapped in a `Result`.
+##### example
 
 ```ts
-const x = Err(5).mapErr(x => x  2);
+const x = Err(5).mapErr(x => x * 2);
 expect(x.unwrapErr()).toEqual(10);
 
-const y = Ok("foo").mapErr(x => x  2);
+const y = Ok("foo").mapErr(x => x * 2);
 expect(() => y.unwrapErr()).toThrow();
 expect(y.unwrap()).toEqual("foo");
 
 ```
 ## .mapOr 
 
-#### signature 
+<span class="sig">`(B, A -> B) -> B`</span>
 
-`(B, A -> B) -> B`
-
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`b` default value to be used in `Result` is `Err`.
-
-#### returns
-
-the provided default (if `Err`), or applies a function to the contained value (if `Ok`).
-#### example
+Returns the provided default (if `Err`), or applies a function to the contained value (if `Ok`).
+##### example
 
 ```ts
 const x = Ok("foo").mapOr(42, v => v.length);
@@ -409,38 +439,24 @@ expect(y).toEqual(42);
 ```
 ## .mapOrElse 
 
-#### signature 
+<span class="sig">`(E -> B, A -> B) -> B`</span>
 
-`((E -> B), (A -> B)) -> B`
+Maps a `Result<A, E>` to `B` by applying `E -> B` to a contained `Err` value, or `A -> B` to a contained `Ok` value.
 
-#### this
-
-`Result<A, E>`
-
-Maps a `Result<A, E>` to `B` by applying `errFn` to a contained `Err` value, or `okFn` to a contained `Ok` value.
-
-#### params
-
-`okFn` function to be executed if `Result<A, E>` is `Ok`.
-
-`errFn` function to be executed if `Result<A, E>` is `Err`.
-
-#### returns
-
-the result of `okFn` or `errFn`.
-#### example
+Returns the result of `E -> B` or `A -> B`.
+##### example
 
 ```ts
 const x = Ok<string, string>("foo").mapOrElse(
-err => err.length,
-val => val.length
+  err => err.length,
+  val => val.length
 );
 
 expect(x).toEqual(3);
 
 const y = Err<string, string>("oh no").mapOrElse(
-err => err.length,
-val => val.length
+  err => err.length,
+  val => val.length
 );
 
 expect(y).toEqual(5);
@@ -448,46 +464,28 @@ expect(y).toEqual(5);
 ```
 ## .andThen 
 
-#### signature 
-
-`(A -> Result<B, F>) -> Result<B, E | F>`
-
-#### this
-
-`Result<A, E>`
+<span class="sig">`(A -> Result<B, F>) -> Result<B, E | F>`</span>
 
 Evaluates the given function against the `Ok` value of `Result<A, E>` if it is `Ok`.
 
-#### params
-
-`fn` binder function.
-
-#### returns
-
-The resulting value of the binder function if the Result was `Ok`.
-#### example
+Returns the resulting value of the given function if the Result was `Ok`.
+##### example
 
 ```ts
-const x = Ok(5).andThen(x => Ok(x  2));
+const x = Ok(5).andThen(x => Ok(x * 2));
 expect(x.unwrap()).toEqual(10);
 
-const y = Err("oops").andThen(x => Ok(x  2));
+const y = Err("oops").andThen(x => Ok(x * 2));
 expect(() => y.unwrap()).toThrow();
 expect(y.unwrapErr()).toEqual("oops");
 
 ```
 ## .forEach 
 
-#### signature 
-
-`A -> void`
-
-#### this
-
-`Result<A, E>`
+<span class="sig">`A -> void`</span>
 
 Executes a function against wrapped `Ok` value if the `Result` is `Ok`.
-#### example
+##### example
 
 ```ts
 let x = 0;
@@ -498,16 +496,10 @@ expect(x).toEqual(5);
 ```
 ## .forEachErr 
 
-#### signature 
-
-`E -> void`
-
-#### this
-
-`Result<A, E>`
+<span class="sig">`E -> void`</span>
 
 Executes a function against wrapped `Err` value if the `Result` is an `Err`.
-#### example
+##### example
 
 ```ts
 let x = 0;
@@ -518,16 +510,10 @@ expect(x).toEqual(5);
 ```
 ## .to 
 
-#### signature 
-
-`(Result<A, E> -> B) -> B`
-
-#### this
-
-`Result<A, E>`
+<span class="sig">`(Result<A, E> -> B) -> B`</span>
 
 Pipes this current `Result` instance as an argument to the given function.
-#### example
+##### example
 
 ```ts
 const a = Ok("3").to(x => Number(x.unwrap()));
@@ -536,18 +522,10 @@ expect(a).toEqual(3);
 ```
 ## .toArray 
 
-#### signature 
+<span class="sig">`() -> A[]`</span>
 
-`() -> A[]`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-a `A[]` with one element if the `Result<A, E>` is `Ok`. Otherwise returns an empty `A[]`.
-#### example
+Returns a `A[]` with one element if the `Result<A, E>` is `Ok`. Otherwise returns an empty `A[]`.
+##### example
 
 ```ts
 const x = Ok(5).toArray();
@@ -559,18 +537,10 @@ expect(y.length).toEqual(0);
 ```
 ## .toErrArray 
 
-#### signature 
+<span class="sig">`() -> E[]`</span>
 
-`() -> E[]`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-a `E[]` with one element if the `Result<A, E>` is `Err`. Otherwise returns an empty `E[]`.
-#### example
+Returns a `E[]` with one element if the `Result<A, E>` is `Err`. Otherwise returns an empty `E[]`.
+##### example
 
 ```ts
 const x = Err("oops").toErrArray();
@@ -582,34 +552,22 @@ expect(y.length).toEqual(0);
 ```
 ## .toAsyncResult 
 
-#### signature 
+<span class="sig">`() -> AsyncResult<A, E>`</span>
 
-`() -> AsyncResult<A, E>`
+Converts a `Result` into a `AsyncResult`.
+##### example
 
-#### this
+```ts
+const a = Ok(5).toAsyncResult();
+expect(a).toBeInstanceOf(AsyncResult);
 
-`Result<A, E>`
-
-
-
+```
 ## .and 
 
-#### signature 
+<span class="sig">`Result<B, F> -> Result<A * B, E | F>`</span>
 
-`Result<B, F> -> Result<A  B, E | F>`
-
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`r` `Result` to zip with this one.
-
-#### returns
-
-the tupled values of the two `Result`s if they are all `Ok`, otherwise returns this `Err` or `r`'s `Err`.
-#### example
+Returns the tupled values of the two `Result`s if they are all `Ok`, otherwise returns this `Err` or the param `Err`.
+##### example
 
 ```ts
 const x = Ok("hello").and(Ok(10));
@@ -624,22 +582,10 @@ expect(z.unwrapErr()).toEqual("fatal");
 ```
 ## .or 
 
-#### signature 
+<span class="sig">`Result<A, F> -> Result<A, E | F>`</span>
 
-`Result<A, F> -> Result<A, E | F>`
-
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`r` `Result` to be returned if `this` is `Err`.
-
-#### returns
-
-`r` if `this` result is `Err`, otherwise returns `this`.
-#### example
+Returns the arg `Result` if `this` is `Err`, otherwise returns `this`.
+##### example
 
 ```ts
 const a = Ok(2);
@@ -661,30 +607,18 @@ expect(x.or(y).unwrap()).toEqual(2);
 ```
 ## .orElse 
 
-#### signature 
+<span class="sig">`(E -> Result<A, F>) -> Result<A, E | F>`</span>
 
-`(E -> Result<A, F>) -> Result<A, E | F>`
-
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`fn` `Result` returning callback
-
-#### returns
-
-return value from `fn` if `this` result is `Err`, otherwise returns `this`.
-#### example
+Returns return value from the given callback if `this` `Result` is `Err`, otherwise returns `this`.
+##### example
 
 ```ts
 const a = Ok(2);
-const b = (x: number) => Err(x  2);
+const b = (x: number) => Err(x * 2);
 expect(a.orElse(b).unwrap()).toEqual(2);
 
 const c = Err(10);
-const d = (x: number) => Ok(x  2);
+const d = (x: number) => Ok(x * 2);
 expect(c.orElse(d).unwrap()).toEqual(20);
 
 const e = Err(1);
@@ -692,24 +626,16 @@ const f = (x: number) => Err(x + 1);
 expect(e.orElse(f).unwrapErr()).toEqual(2);
 
 const x = Ok(3);
-const y = (x: number) => Ok(x  100);
+const y = (x: number) => Ok(x * 100);
 expect(x.or(y).unwrap()).toEqual(3);
 
 ```
 ## .contains 
 
-#### signature 
+<span class="sig">`A -> boolean`</span>
 
-`A -> boolean`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-`true` if the Result is an `Ok` value containing the given value.
-#### example
+Returns `true` if the Result is an `Ok` value containing the given value.
+##### example
 
 ```ts
 const x = Ok(2);
@@ -721,18 +647,10 @@ expect(x.contains(2)).toBe(false);
 ```
 ## .containsErr 
 
-#### signature 
+<span class="sig">`E -> boolean`</span>
 
-`E -> boolean`
-
-#### this
-
-`Result<A, E>`
-
-#### returns
-
-`true` if the Result is an `Err` value containing the given value.
-#### example
+Returns `true` if the Result is an `Err` value containing the given value.
+##### example
 
 ```ts
 const x = Err("oh no");
@@ -744,22 +662,12 @@ expect(x.containsErr("oops")).toBe(false);
 ```
 ## .inspect 
 
-#### signature 
+<span class="sig">`(A -> void) -> Result<A, E>`</span>
 
-`(A -> void) -> Result<A, E>`
+Calls the given function if the `Result` is `Ok`.
 
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`fn` callback to be called if the `Result` is `Ok`.
-
-#### returns
-
-the original unmodified `Result`.
-#### example
+Returns the original unmodified `Result`.
+##### example
 
 ```ts
 const x: Result<number, string> = Ok(5).inspect(console.log); // prints 5
@@ -773,22 +681,12 @@ expect(y.err).toEqual("oops");
 ```
 ## .inspectErr 
 
-#### signature 
+<span class="sig">`(E -> void) -> Result<A, E>`</span>
 
-`(E -> void) -> Result<A, E>`
+Calls the given function if the `Result` is `Err`.
 
-#### this
-
-`Result<A, E>`
-
-#### params
-
-`fn` callback to be called if the `Result` is `Err`.
-
-#### returns
-
-the original unmodified `Result`.
-#### example
+Returns the original unmodified `Result`.
+##### example
 
 ```ts
 const x: Result<number, string> = Ok(5).inspectErr(console.log); // doesn't print
@@ -802,109 +700,35 @@ expect(y.err).toEqual("oops");
 ```
 ## .collectPromise 
 
-#### signature 
+<span class="sig">`(A -> Promise<B>) -> AsyncResult<B, E>`</span>
 
-`(A -> Promise<B>) -> Promise<Result<B, E>>`
+Given a `Promise` returning callback, executes it if `this` is `Ok`.
 
-#### this
-
-`Result<A, E>`
-
-
-
-## .collectArray 
-
-#### signature 
-
-`(A -> Array<B>) -> Array<Result<B, E>>`
-
-#### this
-
-`Result<A, E>`
-
-
-
-## .collectNullable 
-
-#### signature 
-
-`A -> B | null | undefined`
-
-#### this
-
-`Result<A, E>`
-
-
-
-## ::transposePromise 
-
-#### signature 
-
-`Result<Promise<A>, E> -> Promise<Result<A, E>>`
-
-
-
-## ::transposeArray 
-
-#### signature 
-
-`Result<Array<A>, E> -> Array<Result<A, E>>`
-
-
-
-## ::transposeNullable 
-
-#### signature 
-
-`Result<A | null | undefined, E> -> Result<A, E> | null | undefined`
-
-
-
-## ::flatten 
-
-#### signature 
-
-`Result<Result<A, E>, F> -> Result<A, E | F>`
-
-Converts from `Result<Result<A, E>, F>` to `Result<A, E | F>`.
-
-#### returns
-
-a flattened `Result`.
-
-## Ok 
-
-#### signature 
-
-`A -> Result<A, E>`
-
-#### returns
-
-a `Result<A, E>` that represents a success.
-#### example
+Returns the inner value of the `Promise` wrapped in a `AsyncResult`.
+##### example
 
 ```ts
-const x = Ok(3);
+const res = Ok("ditto").collectPromise(pokemon =>
+  fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
+);
 
-expect(x).toBeInstanceOf(Result);
-expect(x.isOk()).toBe(true)
+expect(res).toBeInstanceOf(AsyncResult);
 
 ```
-## Err 
+## .collectNullable 
 
-#### signature 
+<span class="sig">`(A -> B | null | undefined) -> Result<B, E> | null | undefined`</span>
 
-`E -> Result<A, E>`
+Given a `Nullable` returning callback, executes it if `this` is `Ok`.
 
-#### returns
-
-a `Result<A, E>` that represents an error.
-#### example
+Returns the `NonNullable` value of the callback wrapped inside a `Result`, or `null` or `undefined`.
+##### example
 
 ```ts
-const x = Err("oops");
+const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
 
-expect(x).toBeInstanceOf(Result);
-expect(x.isErr()).toBe(true)
+const x = Ok<number, string>(2);
+const y: Result<number | null, string> = x.map(evenOrNull);
+const z: Result<number, string> | null | undefined = x.collectNullable(evenOrNull);
 
 ```

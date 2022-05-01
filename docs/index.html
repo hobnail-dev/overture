@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Document</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+        <meta name="description" content="Description" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, minimum-scale=1.0"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css"
+        />
+
+        <link rel="stylesheet" href="prism.css" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                font-family: "Open Sans" !important;
+            }
+
+            :root {
+                --base-line-height: 1.7;
+                --heading-h4-margin: 20px 0 0;
+                --heading-h5-margin: 30px 0 0;
+                --sidebar-width: 18rem;
+                --sidebar-nav-indent: 0.5em;
+            }
+
+            .sig code {
+                font-size: 16px !important;
+                color: cornflowerblue !important;
+                padding: 4px 8px !important;
+                margin: 0;
+                font-weight: bold;
+            }
+
+            a.section-link {
+                font-size: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app"></div>
+        <script>
+            window.$docsify = {
+                name: "@hobnail/overture",
+                repo: "https://github.com/hobnail-dev/overture",
+                logo: "overture.png",
+                loadSidebar: true,
+                subMaxLevel: 3,
+            };
+        </script>
+        <!-- Docsify v4 -->
+        <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+        <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/emoji.min.js"></script>
+        <script src="//unpkg.com/prismjs/components/prism-bash.js"></script>
+        <script src="//unpkg.com/prismjs/components/prism-typescript.js"></script>
+    </body>
+</html>
