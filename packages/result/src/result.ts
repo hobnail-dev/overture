@@ -1,4 +1,5 @@
 import { AsyncResult } from "./asyncResult";
+import { Exn } from "./exn";
 
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
@@ -8,15 +9,51 @@ export class Result<A, E> {
     private constructor(
         private readonly _isOk: boolean,
         /**
+         * this: Result<A, E>
+         *
+         * val: A | undefined
+         *
+         * ---
          * The raw `Ok` value inside the `Result<A, E>`.
+         * @example
+         * const x = Ok(3);
+         * expect(x.val).toEqual(3);
+         *
+         * const y = Err("oops");
+         * expect(y.val).toBeUndefined();
          */
         readonly val?: A,
         /**
+         * this: Result<A, E>
+         *
+         * err: E | undefined
+         *
+         * ---
          * The raw `Err` value, inside the `Result<A, E>`.
+         * @example
+         * const x = Err(3);
+         * expect(x.err).toEqual(3);
+         *
+         * const y = Ok("hello");
+         * expect(y.err).toBeUndefined();
          */
         readonly err?: E,
         /**
-         * `Err` stack trace.
+         * this: Result<A, E>
+         *
+         * stack: string | undefined
+         *
+         * ---
+         * `Err` stack trace. Is only present if the `Result` is `Err` and has had the stack trace added to it with `.trace()`.
+         * @example
+         * const a = Ok(3);
+         * expect(a.stack).toBeUndefined();
+         *
+         * const b = Err("oops");
+         * exepct(b.stack).toBeUndefined();
+         *
+         * const c = Err("oh no").trace();
+         * expect(c.stack).toBeDefined();
          */
         readonly stack?: string
     ) {}
@@ -50,36 +87,54 @@ export class Result<A, E> {
      * expect(x).toBeInstanceOf(Result);
      * expect(x.isErr()).toBe(true)
      */
-    static err<A = never, E = never>(error: E): Result<A, E> {
-        return new Result(false, undefined, error) as any;
+    static err<A = never, E = never>(error: E): Result<A, E>;
+    static err<A = never, E = never>(error: E, stack?: string): Result<A, E>;
+    static err<A = never, E = never>(error: E, stack?: string): Result<A, E> {
+        return new Result(false, undefined, error, stack) as any;
     }
 
     /**
-     * `try: (() -> A) -> Result<A, Error>`
+     * `try: (T extends string, () -> A) -> Result<A, Exn<T>>`
      *
      * ---
-     * @param fn function that might throw.
-     * @returns `Result<A, Error>` with the caught `Error` if it was thrown.
+     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
      *
-     * Note: If anything other than an `Error` is thrown, will create a new `Error` and stringify the thrown value in the message.
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
      *
      * @example
-     * const a = Result.try(() => { throw new Error("oh no") });
-     * expect(a.err).toBeInstanceOf(Error);
-     * expect(a.err?.message).toEqual("oh no");
+     * const a: Result<number, Exn<"MyExnTypeName">> =
+     * Result.try("MyExnTypeName", () => {
+     *   if (true) throw new Error("oh no")
+     *   else return 1;
+     * });
+     * expect(a.unwrapErr().type).toEqual("MyExnTypeName");
+     * expect(a.unwrapErr().message).toEqual("oh no");
      *
-     * const b = Result.try(() => { throw "oops" });
-     * expect(b.err).toBeInstanceOf(Error);
-     * expect(b.err?.message).toEqual("oops");
+     * const b = Result.try("Panic!", () => { throw "oops" });
+     * expect(b.unwrapErr().type).toEqual("Panic!");
+     * expect(b.unwrapErr().message).toEqual("oops");
      */
-    static try<A>(fn: () => A): Result<A, Error> {
+    static try<A, T extends string>(
+        exnType: T,
+        fn: () => A
+    ): Result<A, Exn<T>> {
         try {
             return Result.ok(fn());
         } catch (e) {
             const stringify = (e: unknown) =>
                 typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
 
-            return Result.err(e instanceof Error ? e : new Error(stringify(e)));
+            const [message, stack] =
+                e instanceof Error
+                    ? [e.message, e.stack]
+                    : [stringify(e), new Error().stack];
+
+            return new Result(
+                false,
+                undefined,
+                { type: exnType, message },
+                stack
+            ) as any;
         }
     }
 
@@ -187,8 +242,7 @@ export class Result<A, E> {
      * `unwrapOr: A -> A`
      *
      * ---
-     * @param a default value to return if `this` is `Err`.
-     * @returns the contained `Ok` value or `a`.
+     * @returns the contained `Ok` value or the default value passed as an argument.
      * @example
      * const x = Ok(9).or(2);
      * expect(x).toEqual(9);
@@ -208,8 +262,7 @@ export class Result<A, E> {
      * `unwrapOrElse: (E -> A) -> A`
      *
      * ---
-     * @param fn callback returning a default value to be used if `this` is `Err`.
-     * @returns the contained `Ok` value or the return value from `fn`.
+     * @returns the contained `Ok` value or the return value from `E -> A`.
      * @example
      * const count = (x: string) => x.length;
      *
@@ -254,8 +307,7 @@ export class Result<A, E> {
      * `expect: string -> A`
      *
      * ---
-     * @throws if the value is an `Err`, with the message param and the content of the `Err`.
-     * @param msg error message to be displayed when error is thrown.
+     * @throws if the value is an `Err`, with the string argument as the message of the `Error`.
      * @returns the contained `Ok` value.
      * @example
      * const x = Err("oh no!");
@@ -278,8 +330,7 @@ export class Result<A, E> {
      * `expectErr: string -> E`
      *
      * ---
-     * @throws if the value is an `Ok`, with the message param and the content of the `Ok`.
-     * @param msg error message to be displayed when error is thrown.
+     * @throws an `Error` with the given string and the `Ok` value as a message if `this` is `Ok`.
      * @returns the contained `Err` value.
      * @example
      * const x = Ok(10);
@@ -300,6 +351,15 @@ export class Result<A, E> {
      *
      * ---
      * Adds a stack trace to the `Result` if it is an `Err`.
+     * @example
+     * const a = Ok(3);
+     * expect(a.stack).toBeUndefined();
+     *
+     * const b = Err("oops");
+     * exepct(b.stack).toBeUndefined();
+     *
+     * const c = Err("oh no").trace();
+     * expect(c.stack).toBeDefined();
      */
     trace(): Result<A, E> {
         if (this.isErr()) {
@@ -321,7 +381,6 @@ export class Result<A, E> {
      *
      * ---
      * Evaluates the given function against the `A` value of `Result<A, E>` if it is `Ok`.
-     * @param fn mapping function.
      * @returns The resulting value of the mapping function wrapped in a `Result`.
      * @example
      * const x = Ok(5).map(x => x * 2);
@@ -346,7 +405,6 @@ export class Result<A, E> {
      *
      * ---
      * Evaluates the given function against the `E` value of `Result<A, E>` if it is an `Err`.
-     * @param fn mapping function.
      * @returns The resulting value of the mapping function wrapped in a `Result`.
      * @example
      * const x = Err(5).mapErr(x => x * 2);
@@ -370,7 +428,6 @@ export class Result<A, E> {
      * `mapOr: (B, A -> B) -> B`
      *
      * ---
-     * @param b default value to be used in `Result` is `Err`.
      * @returns the provided default (if `Err`), or applies a function to the contained value (if `Ok`).
      * @example
      * const x = Ok("foo").mapOr(42, v => v.length);
@@ -390,13 +447,11 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
-     * `mapOrElse: ((E -> B), (A -> B)) -> B`
+     * `mapOrElse: (E -> B, A -> B) -> B`
      *
      * ---
-     * Maps a `Result<A, E>` to `B` by applying `errFn` to a contained `Err` value, or `okFn` to a contained `Ok` value.
-     * @param okFn function to be executed if `Result<A, E>` is `Ok`.
-     * @param errFn function to be executed if `Result<A, E>` is `Err`.
-     * @returns the result of `okFn` or `errFn`.
+     * Maps a `Result<A, E>` to `B` by applying `E -> B` to a contained `Err` value, or `A -> B` to a contained `Ok` value.
+     * @returns the result of `E -> B` or `A -> B`.
      * @example
      * const x = Ok<string, string>("foo").mapOrElse(
      *   err => err.length,
@@ -427,8 +482,7 @@ export class Result<A, E> {
      *
      * ---
      * Evaluates the given function against the `Ok` value of `Result<A, E>` if it is `Ok`.
-     * @param fn binder function.
-     * @returns The resulting value of the binder function if the Result was `Ok`.
+     * @returns The resulting value of the given function if the Result was `Ok`.
      * @example
      * const x = Ok(5).andThen(x => Ok(x * 2));
      * expect(x.unwrap()).toEqual(10);
@@ -548,6 +602,10 @@ export class Result<A, E> {
      * `toAsyncResult: () -> AsyncResult<A, E>`
      *
      * ---
+     * Converts a `Result` into a `AsyncResult`.
+     * @example
+     * const a = Ok(5).toAsyncResult();
+     * expect(a).toBeInstanceOf(AsyncResult);
      */
     toAsyncResult(): AsyncResult<A, E> {
         return AsyncResult.fromResult(this);
@@ -559,8 +617,7 @@ export class Result<A, E> {
      * `and: Result<B, F> -> Result<A * B, E | F>`
      *
      * ---
-     * @param r `Result` to zip with this one.
-     * @returns the tupled values of the two `Result`s if they are all `Ok`, otherwise returns this `Err` or `r`'s `Err`.
+     * @returns the tupled values of the two `Result`s if they are all `Ok`, otherwise returns this `Err` or the param `Err`.
      * @example
      * const x = Ok("hello").and(Ok(10));
      * expect(x.unwrap()).toEqual(["hello", 10]);
@@ -589,8 +646,7 @@ export class Result<A, E> {
      * `or: Result<A, F> -> Result<A, E | F>`
      *
      * ---
-     * @param r `Result` to be returned if `this` is `Err`.
-     * @returns `r` if `this` result is `Err`, otherwise returns `this`.
+     * @returns the arg `Result` if `this` is `Err`, otherwise returns `this`.
      * @example
      * const a = Ok(2);
      * const b = Err("later error");
@@ -622,8 +678,7 @@ export class Result<A, E> {
      * `orElse: (E -> Result<A, F>) -> Result<A, E | F>`
      *
      * ---
-     * @param fn `Result` returning callback
-     * @returns return value from `fn` if `this` result is `Err`, otherwise returns `this`.
+     * @returns return value from the given callback if `this` `Result` is `Err`, otherwise returns `this`.
      * @example
      * const a = Ok(2);
      * const b = (x: number) => Err(x * 2);
@@ -691,7 +746,7 @@ export class Result<A, E> {
      * `inspect: (A -> void) -> Result<A, E>`
      *
      * ---
-     * @param fn callback to be called if the `Result` is `Ok`.
+     * Calls the given function if the `Result` is `Ok`.
      * @returns the original unmodified `Result`.
      * @example
      * const x: Result<number, string> = Ok(5).inspect(console.log); // prints 5
@@ -716,7 +771,7 @@ export class Result<A, E> {
      * `inspectErr: (E -> void) -> Result<A, E>`
      *
      * ---
-     * @param fn callback to be called if the `Result` is `Err`.
+     * Calls the given function if the `Result` is `Err`.
      * @returns the original unmodified `Result`.
      * @example
      * const x: Result<number, string> = Ok(5).inspectErr(console.log); // doesn't print
@@ -738,39 +793,40 @@ export class Result<A, E> {
     /**
      * `this: Result<A, E>`
      *
-     * `collectPromise: (A -> Promise<B>) -> Promise<Result<B, E>>`
+     * `collectPromise: (A -> Promise<B>) -> AsyncResult<B, E>`
      *
      * ---
+     * Given a `Promise` returning callback, executes it if `this` is `Ok`.
+     * @returns the inner value of the `Promise` wrapped in a `AsyncResult`.
+     * @example
+     * const res = Ok("ditto").collectPromise(pokemon =>
+     *   fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
+     * );
+     *
+     * expect(res).toBeInstanceOf(AsyncResult);
      */
-    collectPromise<B>(fn: (a: A) => Promise<B>): Promise<Result<B, E>> {
+    collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
         if (this.isErr()) {
-            return this as any;
+            return AsyncResult.fromResult(this) as any;
         }
 
-        return fn(this.val!).then(Result.ok);
+        return AsyncResult.from(fn(this.val!).then(Result.ok));
     }
 
     /**
      * `this: Result<A, E>`
      *
-     * `collectArray: (A -> Array<B>) -> Array<Result<B, E>>`
+     * `collectNullable: (A -> B | null | undefined) -> Result<B, E> | null | undefined`
      *
      * ---
-     */
-    collectArray<B>(fn: (a: A) => Array<B>): Array<Result<B, E>> {
-        if (this.isErr()) {
-            return [Result.err(this.err!)];
-        }
-
-        return fn(this.val!).map(Result.ok);
-    }
-
-    /**
-     * `this: Result<A, E>`
+     * Given a `Nullable` returning callback, executes it if `this` is `Ok`.
+     * @returns the `NonNullable` value of the callback wrapped inside a `Result`, or `null` or `undefined`.
+     * @example
+     * const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
      *
-     * `collectNullable: A -> B | null | undefined`
-     *
-     * ---
+     * const x = Ok<number, string>(2);
+     * const y: Result<number | null, string> = x.map(evenOrNull);
+     * const z: Result<number, string> | null | undefined = x.collectNullable(evenOrNull);
      */
     collectNullable<B>(
         fn: (a: A) => B | null | undefined
@@ -786,27 +842,30 @@ export class Result<A, E> {
     }
 
     /**
-     * `transposePromise: Result<Promise<A>, E> -> Promise<Result<A, E>>`
+     * `transposePromise: Result<Promise<A>, E> -> AsyncResult<A, E>`
      *
      * ---
+     * Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
+     * @example
+     * declare getPokemon(id: number): Promise<Pokemon>;
+     * declare parseId(str: string): Result<number, string>;
+     *
+     * const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
+     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
      */
     static transposePromise = <A, E>(
         rp: Result<Promise<A>, E>
-    ): Promise<Result<A, E>> => rp.collectPromise(x => x);
-
-    /**
-     * `transposeArray: Result<Array<A>, E> -> Array<Result<A, E>>`
-     *
-     * ---
-     */
-    static transposeArray = <A, E>(
-        ra: Result<Array<A>, E>
-    ): Array<Result<A, E>> => ra.collectArray(x => x);
+    ): AsyncResult<A, E> => rp.collectPromise(x => x);
 
     /**
      * `transposeNullable: Result<A | null | undefined, E> -> Result<A, E> | null | undefined`
      *
      * ---
+     * Tranposes a `Result<A | null | undefined, E>` into a `Result<A, E> | null | undefined`.
+     * @example
+     * const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
+     * const x: Result<number | null, string> = Ok(3).map(evenOrNull);
+     * const y: Result<number, string> | null | undefined = Result.tranposeNullable(x);
      */
     static transposeNullable = <A, E>(
         ro: Result<A | null | undefined, E>
@@ -816,8 +875,13 @@ export class Result<A, E> {
      * `flatten: Result<Result<A, E>, F> -> Result<A, E | F>`
      *
      * ---
-     * Converts from `Result<Result<A, E>, F>` to `Result<A, E | F>`.
-     * @returns a flattened `Result`.
+     * Converts from `Result<Result<A, E>, F>` to a `Result<A, E | F>`.
+     * @example
+     * const x = Result.flatten(Ok(Ok(3)));
+     * expect(x.unwrap()).toEqual(3);
+     *
+     * const y = Result.flatten(Ok(Err("oops")));
+     * expect(y.unwrapErr()).toEqual("oops");
      */
     static flatten = <A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> =>
         r.andThen(x => x);
@@ -849,6 +913,41 @@ export const Ok = Result.ok;
  */
 export const Err = Result.err;
 
+/**
+ * `result: Error Propagation`
+ *
+ * ---
+ *
+ * Allows easy propagation of errors using the `yield*` keyword.
+ * The `yield*` keyword when called will only continue the further exection of the function if the `Result` is `Ok`. If the `Result` is `Err`, the `yield*` forces the function to return early with the `Err` value.
+ * @example
+ * declare function getQueryParam(query: string): Result<string, QueryErr>;
+ * declare function parseId(str: string): Result<number, ParseErr>;
+ * declare function findUser(id: int): Result<user, UserNotFoundErr>;
+ *
+ * const x: Result<User, QueryErr | ParseErr | UserNotFoundErr> =
+ *   result(function* () {
+ *     const idParam: string = yield* getQueryParam("&id=5");
+ *     const id: number = yield* parseId(idParam);
+ *     const user: User = yield* findUser(id);
+ *
+ *     return user;
+ *   });
+ *
+ * // without yield*:
+ * const y = (() => {
+ *   const idParam = getQueryParam("&id=5");
+ *   if (idParam.isErr()) return idParam;
+ *
+ *   const id = parseId(idParam.unwrap());
+ *   if (id.isErr()) return id;
+ *
+ *   const user = findUser(id.unwrap());
+ *   if (user.isErr()) return user;
+ *
+ *   return user.unwrap().name;
+ * })();
+ */
 export const result = <A, E, B, R extends Result<A, E>>(
     genFn: () => Generator<R, B, A>
 ): Result<B, NonNullable<R["err"]>> => {

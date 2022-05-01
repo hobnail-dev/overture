@@ -1,48 +1,106 @@
 import "./promise";
 
+import { Exn } from "./exn";
 import { Err, Ok, Result } from "./result";
 
+/**
+ * `AsyncResult<A, E>` is the type used for returning and propagating asynchronous errors.
+ * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
+ *
+ * `AsyncResult` implements `PromiseLike`, so it can always be awaited.
+ */
 export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     private constructor(readonly inner: Promise<Result<A, E>>) {}
 
+    /**
+     * `from: Promise<Result<A, E>> -> AsyncResult<A, E>`
+     *
+     * ---
+     * Creates a `AsyncResult<A, E>` from a `Promise<Result<A, E>>`
+     * @example
+     * const x = Promise.resolve(Ok(3));
+     * expect(x).toBeInstanceOf(Promise);
+     *
+     * const y = AsyncResult.from(x);
+     * expect(y).toBeInstanceOf(AsyncResult);
+     */
     static from<A, E>(promiseResult: Promise<Result<A, E>>): AsyncResult<A, E> {
         return new AsyncResult(promiseResult);
     }
 
+    /**
+     * `fromPromise: Promise<A> -> AsyncResult<A, E>`
+     *
+     * ---
+     * Creates a `AsyncResult<A, E>` from a `Promise<A>`
+     * @example
+     * const x = Promise.resolve(3);
+     * expect(x).toBeInstanceOf(Promise);
+     *
+     * const y = AsyncResult.fromPromise(x);
+     * expect(y).toBeInstanceOf(AsyncResult);
+     * expect(await y.isOk()).toBe(true);
+     * expecy(await y.unwrap()).toEqual(3);
+     */
     static fromPromise<A, E = never>(promise: Promise<A>): AsyncResult<A, E> {
         return new AsyncResult(promise.then(Result.ok));
     }
 
+    /**
+     * `fromResult: Result<A, E> -> AsyncResult<A, E>`
+     *
+     * ---
+     * Creates a `AsyncResult<A, E>` from a `Result<A, E>`
+     * @example
+     * const x = Ok(3);
+     * expect(x).toBeInstanceOf(Promise);
+     *
+     * const y = AsyncResult.fromResult(x);
+     * expect(y).toBeInstanceOf(AsyncResult);
+     * expecy(await y.unwrap()).toEqual(3);
+     */
     static fromResult<A, E>(result: Result<A, E>): AsyncResult<A, E> {
         return new AsyncResult(Promise.resolve(result));
     }
 
     /**
-     * `try: (() -> Promise<A>) -> AsyncResult<A, Error>`
+     * `try: (T extends string, () -> A) -> AsyncResult<A, Exn<T>>`
      *
      * ---
-     * @param fn function that might throw.
-     * @returns `AsyncResult<A, Error>` with the caught `Error` if it was thrown.
+     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
      *
-     * Note: If anything other than an `Error` is thrown, will create a new `Error` and stringify the thrown value in the message.
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
      *
      * @example
-     * const a = await AsyncResult.try(async () => { throw new Error("oh no") });
-     * expect(a.err).toBeInstanceOf(Error);
-     * expect(a.err?.message).toEqual("oh no");
+     * const a: AsyncResult<number, Exn<"MyExnTypeName">> =
+     * AsyncResult.try("MyExnTypeName", async () => {
+     *   if (true) throw new Error("oh no")
+     *   else return 1;
+     * });
+     * expect((await a.unwrapErr()).type).toEqual("MyExnTypeName");
+     * expect((await a.unwrapErr()).message).toEqual("oh no");
      *
-     * const b = await AsyncResult.try(async () => { throw "oops" });
-     * expect(b.err).toBeInstanceOf(Error);
-     * expect(b.err?.message).toEqual("oops");
+     * const b = AsyncResult.try("Panic!", async () => { throw "oops" });
+     * expect((await b.unwrapErr()).type).toEqual("Panic!");
+     * expect((await b.unwrapErr()).message).toEqual("oops");
      */
-    static try<A>(fn: () => Promise<A>): AsyncResult<A, Error> {
+    static try<A, T extends string>(
+        exnType: T,
+        fn: () => Promise<A>
+    ): AsyncResult<A, Exn<T>> {
         const stringify = (e: unknown) =>
             typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
 
-        const catcher = (e: unknown) =>
-            Result.err(e instanceof Error ? e : new Error(stringify(e)));
+        const catcher = (e: unknown) => {
+            const [message, stack] =
+                e instanceof Error
+                    ? [e.message, e.stack]
+                    : [stringify(e), new Error().stack];
 
-        const x: Promise<Result<A, Error>> = fn()
+            return Result.err({ type: exnType, message }, stack);
+        };
+
+        const x: Promise<Result<A, Exn<T>>> = fn()
             .then(Result.ok)
             .catch(catcher);
 
@@ -147,8 +205,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `unwrapOr: A -> Promise<A>`
      *
      * ---
-     * @param a default value to return if `this` is `Err`.
-     * @returns the contained `Ok` value or `a`.
+     * @returns the contained `Ok` value or the default value passed as an argument.
      * @example
      * const x = await AsyncOk(9).or(2);
      * expect(x).toEqual(9);
@@ -166,8 +223,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `unwrapOrElse: (E -> A) -> Promise<A>`
      *
      * ---
-     * @param fn callback returning a default value to be used if `this` is `Err`.
-     * @returns the contained `Ok` value or the return value from `fn`.
+     * @returns the contained `Ok` value or the return value from `E -> A`.
      * @example
      * const count = (x: string) => x.length;
      *
@@ -206,8 +262,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `expect: string -> Promise<A>`
      *
      * ---
-     * @throws if the value is an `Err`, with the message param and the content of the `Err`.
-     * @param msg error message to be displayed when error is thrown.
+     * @throws if the value is an `Err`, with the string argument as the message of the `Error`.
      * @returns the contained `Ok` value.
      * @example
      * const x = AsyncErr("oh no!");
@@ -223,8 +278,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `expectErr: string -> Promise<E>`
      *
      * ---
-     * @throws if the value is an `Ok`, with the message param and the content of the `Ok`.
-     * @param msg error message to be displayed when error is thrown.
+     * @throws an `Error` with the given string and the `Ok` value as a message if `this` is `Ok`.
      * @returns the contained `Err` value.
      * @example
      * const x = AsyncOk(10);
@@ -241,9 +295,39 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      *
      * ---
      * Adds a stack trace to the `AsyncResult` if it is an `Err`.
+     * @example
+     * const a = AsyncOk(3);
+     * expect(await a.stack()).toBeUndefined();
+     *
+     * const b = AsyncErr("oops");
+     * exepct(await b.stack()).toBeUndefined();
+     *
+     * const c = AsyncErr("oh no").trace();
+     * expect(await c.stack()).toBeDefined();
      */
     trace(): AsyncResult<A, E> {
         return AsyncResult.from(this.inner.then(x => x.trace()));
+    }
+
+    /**
+     * `this: AsyncResult<A, E>`
+     *
+     * `stack: () -> Promise<string | undefined>`
+     *
+     * ---
+     * `Err` stack trace. Is only present if the `AsyncResult` is `Err` and has had the stack trace added to it with `.trace()`.
+     * @example
+     * const a = AsyncOk(3);
+     * expect(await a.stack()).toBeUndefined();
+     *
+     * const b = AsyncErr("oops");
+     * exepct(await b.stack()).toBeUndefined();
+     *
+     * const c = AsyncErr("oh no").trace();
+     * expect(await c.stack()).toBeDefined();
+     */
+    stack(): Promise<string | undefined> {
+        return this.inner.then(x => x.stack);
     }
 
     /**
@@ -253,7 +337,6 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      *
      * ---
      * Evaluates the given function against the `A` value of `AsyncResult<A, E>` if it is `Ok`.
-     * @param fn mapping function.
      * @returns The resulting value of the mapping function wrapped in a `Result`.
      * @example
      * const x = AsyncOk(5).map(x => x * 2);
@@ -273,7 +356,6 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      *
      * ---
      * Evaluates the given function against the `E` value of `AsyncResult<A, E>` if it is an `Err`.
-     * @param fn mapping function.
      * @returns The resulting value of the mapping function wrapped in a `AsyncResult`.
      * @example
      * const x = AsyncErr(5).mapErr(x => x * 2);
@@ -292,7 +374,6 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `mapOr: (B, A -> B) -> Promise<B>`
      *
      * ---
-     * @param b default value to be used in `AsyncResult` is `Err`.
      * @returns the provided default (if `Err`), or applies a function to the contained value (if `Ok`).
      * @example
      * const x = await AsyncOk("foo").mapOr(42, v => v.length);
@@ -308,13 +389,11 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     /**
      * `this: AsyncResult<A, E>`
      *
-     * `mapOrElse: ((E -> B), (A -> B)) -> Promise<B>`
+     * `mapOrElse: (E -> B, A -> B) -> Promise<B>`
      *
      * ---
-     * Maps a `AsyncResult<A, E>` to `B` by applying `errFn` to a contained `Err` value, or `okFn` to a contained `Ok` value.
-     * @param okFn function to be executed if `AsyncResult<A, E>` is `Ok`.
-     * @param errFn function to be executed if `AsyncResult<A, E>` is `Err`.
-     * @returns the result of `okFn` or `errFn`.
+     * Maps a `Result<A, E>` to `B` by applying `E -> B` to a contained `Err` value, or `A -> B` to a contained `Ok` value.
+     * @returns the result of `E -> B` or `A -> B`.
      * @example
      * const x = await AsyncOk<string, string>("foo").mapOrElse(
      *   err => err.length,
@@ -341,8 +420,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      *
      * ---
      * Evaluates the given function against the `Ok` value of `AsyncResult<A, E>` if it is `Ok`.
-     * @param fn binder function.
-     * @returns The resulting value of the binder function if the AsyncResult was `Ok`.
+     * @returns The resulting value of the given function if the AsyncResult was `Ok`.
      * @example
      * const x = AsyncOk(5).andThen(x => AsyncOk(x * 2));
      * expect(await x.unwrap()).toEqual(10);
@@ -452,8 +530,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `and: AsyncResult<B, F> -> AsyncResult<A * B, E | F>`
      *
      * ---
-     * @param r `AsyncResult` to zip with this one.
-     * @returns the tupled values of the two `AsyncResult`s if they are all `Ok`, otherwise returns this `Err` or `r`'s `Err`.
+     * @returns the tupled values of the two `AsyncResult`s if they are all `Ok`, otherwise returns this `Err` or the param `Err`.
      * @example
      * const x = AsyncOk("hello").and(AsyncOk(10));
      * expect(await x.unwrap()).toEqual(["hello", 10]);
@@ -487,8 +564,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `or: AsyncResult<A, F> -> AsyncResult<A, E | F>`
      *
      * ---
-     * @param r `AsyncResult` to be returned if `this` is `Err`.
-     * @returns `r` if `this` result is `Err`, otherwise returns `this`.
+     * @returns the arg `AsyncResult` if `this` is `Err`, otherwise returns `this`.
      * @example
      * const a = AsyncOk(2);
      * const b = AsyncErr("later error");
@@ -524,8 +600,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `orElse: (E -> AsyncResult<A, F>) -> AsyncResult<A, E | F>`
      *
      * ---
-     * @param fn `AsyncResult` returning callback
-     * @returns return value from `fn` if `this` AsyncResult is `Err`, otherwise returns `this`.
+     * @returns return value from the given callback if `this` `AsyncResult` is `Err`, otherwise returns `this`.
      * @example
      * const a = AsyncOk(2);
      * const b = (x: number) => AsyncErr(x * 2);
@@ -597,7 +672,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `inspect: (A -> void) -> AsyncResult<A, E>`
      *
      * ---
-     * @param fn callback to be called if the `AsyncResult` is `Ok`.
+     * Calls the given function if the `AsyncResult` is `Ok`.
      * @returns the original unmodified `AsyncResult`.
      * @example
      * const x: AsyncResult<number, string> = AsyncOk(5).inspect(console.log);
@@ -618,7 +693,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `inspectErr: (E -> void) -> AsyncResult<A, E>`
      *
      * ---
-     * @param fn callback to be called if the `AsyncResult` is `Err`.
+     * Calls the given function if the `AsyncResult` is `Err`.
      * @returns the original unmodified `AsyncResult`.
      * @example
      * const x: AsyncResult<number, string> = AsyncOk(5).inspectErr(console.log);
@@ -639,6 +714,14 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `collectPromise: (A -> Promise<B>) -> AsyncResult<B, E>`
      *
      * ---
+     * Given a `Promise` returning callback, executes it if `this` is `Ok`.
+     * @returns the inner value of the `Promise` wrapped in a `AsyncResult`.
+     * @example
+     * const res = AsyncOk("ditto").collectPromise(pokemon =>
+     *   fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
+     * );
+     *
+     * expect(res).toBeInstanceOf(AsyncResult);
      */
     collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
         return AsyncResult.from(
@@ -656,6 +739,14 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * `transposePromise: AsyncResult<Promise<A>, E> -> AsyncResult<A, E>`
      *
      * ---
+     * Tranposes a `AsyncResult<Promise<A>, E>` into a `AsyncResult<A, E>`. 
+     * @example
+     * declare getPokemon(id: number): Promise<Pokemon>;
+     * declare parseId(str: string): AsyncResult<number, string>;
+     *
+     * const x: AsyncResult<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
+     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+
      */
     static transposePromise = <A, E>(
         rp: AsyncResult<Promise<A>, E>
@@ -666,20 +757,88 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      *
      * ---
      * Converts from `AsyncResult<AsyncResult<A, E>, F>` to `AsyncResult<A, E | F>`.
-     * @returns a flattened `AsyncResult`.
+     * @example
+     * const x = AsyncResult.flatten(AsyncOk(AsyncOk(3)));
+     * expect(await x.unwrap()).toEqual(3);
+     *
+     * const y = AsyncResult.flatten(AsyncOk(AsyncErr("oops")));
+     * expect(await y.unwrapErr()).toEqual("oops");
      */
     static flatten = <A, E, F>(
         r: AsyncResult<AsyncResult<A, E>, F>
     ): AsyncResult<A, E | F> => r.andThen(x => x);
 }
 
+/**
+ * `Async: A -> Promise<A>`
+ *
+ * ---
+ * An alias to `Promise.resolve`.
+ * @returns the value given wrapped in a `Promise`.
+ * @example
+ * const a = Promise.resolve(5);
+ * const b = Async(5);
+ *
+ * expect(await a).toEqual(await b);
+ */
 export const Async = async <A>(a: A): Promise<A> => a;
+
+/**
+ * `AsyncOk: A -> AsyncResult<A, E>`
+ *
+ * ---
+ * @returns a `AsyncOk<A, E>` that represents an asynchronous success.
+ * @example
+ * const x = AsyncOk(3);
+ *
+ * expect(x).toBeInstanceOf(AsyncResult);
+ * expect(await x.isOk()).toBe(true
+ */
 export const AsyncOk = <A = never, E = never>(a: A): AsyncResult<A, E> =>
     AsyncResult.fromResult(Ok(a));
 
+/**
+ * `AsyncErr: E -> AsyncResult<A, E>`
+ *
+ * ---
+ * @returns a `AsyncResult<A, E>` that represents an asynchronous error.
+ * @example
+ * const x = AsyncErr("oops");
+ *
+ * expect(x).toBeInstanceOf(AsyncResult);
+ * expect(await x.isErr()).toBe(true)
+ */
 export const AsyncErr = <A = never, E = never>(e: E): AsyncResult<A, E> =>
     AsyncResult.fromResult(Err(e));
 
+/**
+ * `asyncResult: Error Propagation`
+ *
+ * ---
+ *
+ * Allows awaiting async operations and propagation of errors using the `yield*` keyword.
+ * The `yield*` keyword when called will only continue the further exection of the function if the `AsyncResult` is `Ok`. If the `AsyncResult` is `Err`, the `yield*` forces the function to return early with the `Err` value.
+ * `asyncResult` blocks work a bit differently than `result` blocks. Here you can also `yield*` the following:
+ * - `Promise`: `yield*` will await the `Promise`.
+ * - `Result`: `yield*` returns early if the `Result` is `Err`, otherwise extracts the `Ok` value.
+ * - `AsyncResult`: `yield*` awaits the `AsyncResult` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
+ * - `Promise<Result>`: `yield*` awaits the `Promise` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
+ * @example
+ * declare function getQueryParam(query: string): Promise<Result<string, QueryErr>>;
+ * declare function parseId(str: string): Result<number, ParseErr>;
+ * declare function findUser(id: int): AsyncResult<user, UserNotFoundErr>;
+ * declare function sendEmail(user: User): Promise<Response>;
+ *
+ * const x: AsyncResult<number, QueryErr | ParseErr | UserNotFoundErr> =
+ *   asyncResult(function* () {
+ *     const idParam: string = yield* getQueryParam("&id=5");
+ *     const id: number = yield* parseId(idParam);
+ *     const user: User = yield* findUser(id);
+ *     const response: Response = yield* sendEmail(user);
+ *
+ *     return response.status;
+ *   });
+ */
 export const asyncResult = <A, E, B, R extends Result<A, E>>(
     genFn: () => Generator<
         | R

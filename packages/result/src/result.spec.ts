@@ -29,28 +29,27 @@ describe("Result", () => {
 
     describe("::try", () => {
         it("Creates an Ok Result from a function that might throw but didn't", () => {
-            const x = Result.try(() => "didnt throw");
+            const x = Result.try("something", () => "didnt throw");
 
             expect(x.val).toEqual("didnt throw");
         });
 
         it("Creates an Err Result with an Error from a function that throws", () => {
-            const x = Result.try(() => {
+            const x = Result.try("OhNo", () => {
                 throw new Error("oh no");
             });
 
-            expect(x.err?.name).toEqual("Error");
+            expect(x.err?.type).toEqual("OhNo");
             expect(x.err?.message).toEqual("oh no");
         });
 
         it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
-            const x = Result.try(() => {
+            const x = Result.try("Oops", () => {
                 // eslint-disable-next-line @typescript-eslint/no-throw-literal
                 throw "oops";
             });
 
-            expect(x.err).toBeInstanceOf(Error);
-            expect(x.err?.name).toEqual("Error");
+            expect(x.err?.type).toEqual("Oops");
             expect(x.err?.message).toEqual("oops");
         });
     });
@@ -514,19 +513,6 @@ describe("Result", () => {
         });
     });
 
-    describe(".collectArray", () => {
-        it("Executes an Array returning function against the value of the Result when it is Ok, returning the Array with it's values wrapped in a Result", () => {
-            const a = Ok(1).collectArray(x => [x]);
-            expect(a[0]!.val).toEqual(1);
-        });
-
-        it("Wraps the Err value in an Array if the Result is an Err", () => {
-            const res = Err("oops").collectArray(x => [x]);
-
-            expect(res[0]!.err).toEqual("oops");
-        });
-    });
-
     describe(".collectNullable", () => {
         const evenOrNull = (x: number) => (x % 2 === 0 ? x : null);
         const evenOrUndefined = (x: number) => (x % 2 === 0 ? x : undefined);
@@ -563,22 +549,6 @@ describe("Result", () => {
                 .to(Result.transposePromise);
 
             expect(res.err).toEqual("oops");
-        });
-    });
-
-    describe("::transposeArray", () => {
-        it("Flips a Result<Array<A>, E> into an Array<Result<A, E>>", () => {
-            const a = Ok(1)
-                .map(x => [x * 2])
-                .to(Result.transposeArray);
-
-            expect(a[0]!.val).toEqual(2);
-
-            const res = Err("oops")
-                .map(x => [x * 2])
-                .to(Result.transposeArray);
-
-            expect(res[0]!.err).toEqual("oops");
         });
     });
 
