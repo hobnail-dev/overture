@@ -1,5 +1,5 @@
+<h1 align="center">Overture</h1>
 <p align="center">
-    <h1>Overture</h1>
   <img src="docs/overture.png" width="250px" height="250px"/>
 </p>
 
