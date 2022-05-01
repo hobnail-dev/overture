@@ -32,7 +32,7 @@ A `Result` can always be one of two values. There are a few ways of extracting t
 One of the main ways of extracting a value from a `Result`. Requires that two callbacks be provided, one for dealing with the `Err` value, and one for dealing with the `Ok` value.
 
 ```ts
-declare parseNum(str: string): Result<number, string>;
+declare function parseNum(str: string): Result<number, string>;
 
 const num = parseNum("5").mapOrElse(
     err => `We had an err: ${err}`,
@@ -136,7 +136,7 @@ To achieve this we can use [`Array::transposeResult`](result/reference/array.md#
 ```ts
 import { Result } from "@hobnail/result";
 
-declare parseNum(str: string): Result<number, string>;
+declare function parseNum(str: string): Result<number, string>;
 
 const foo = ["1", "2", "3"].map(parseNum);
 const bar = Array.transposeResult(foo);
@@ -167,9 +167,9 @@ The `result` block will accumulate any error that might have happened, so you wi
 ```ts
 import { result, Result } from "@hobnail/result";
 
-declare getUserInput(): Result<string, InputError>;
-declare parseNum(str: string): Result<number, ParseError>;
-declare divide(a: number, b: number): Result<number, DivError>;
+declare function getUserInput(): Result<string, InputError>;
+declare function parseNum(str: string): Result<number, ParseError>;
+declare function divide(a: number, b: number): Result<number, DivError>;
 
 const divide100 = () =>
     result(function*() {
@@ -204,10 +204,10 @@ Below is an example using all of the types mentioned up above:
 ```ts
 import { asyncResult, Result, AsyncResult } from "@hobnail/result";
 
-declare getUserInput(): AsyncResult<string, InputError>;
-declare parseNum(str: string): Result<number, ParseError>;
-declare fetchPokemon(pokeNumber: number): AsyncResult<Pokemon, FetchError>;
-declare calculatePower(pokemon: Pokemon): Promise<number>;
+declare function getUserInput(): AsyncResult<string, InputError>;
+declare function parseNum(str: string): Result<number, ParseError>;
+declare function fetchPokemon(pokeNumber: number): AsyncResult<Pokemon, FetchError>;
+declare function calculatePower(pokemon: Pokemon): Promise<number>;
 
 const getPokemonPower = (): AsyncResult<number, InputError | ParseError | FetchError> =>
     asyncResult(function*() {
@@ -220,7 +220,7 @@ const getPokemonPower = (): AsyncResult<number, InputError | ParseError | FetchE
     });
 
 
-const power = await getPokemonPower(50).matchOrElse(
+const power = await getPokemonPower().matchOrElse(
     err => `There was an error: ${err}`,
     pow => `Power is: ${pow}`
 );

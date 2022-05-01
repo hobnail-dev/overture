@@ -24,9 +24,9 @@ We would then check if the `Error` value is `null`, if so we can proceed with th
 Let's use `declare` and pretend we have a few more functions doing the same for a juicier example.
 
 ```ts
-declare getUserInput(): [string, InputError | null];
-declare parseNum(str: string): [number, ParseError | null];
-declare divide(a: number, b: number): [number, DivError | null];
+declare function getUserInput(): [string, InputError | null];
+declare function parseNum(str: string): [number, ParseError | null];
+declare function divide(a: number, b: number): [number, DivError | null];
 
 const divide100 = () => {
     const [input, inputErr] = getUserInput();
@@ -56,9 +56,9 @@ Already better than throwing, but a bit annoying to write all the time. With `@h
 Here's what the previous *Go* example would look like using `@hobnail/result`.
 
 ```ts
-declare getUserInput(): Result<string, InputError>;
-declare parseNum(str: string): Result<number, ParseError>;
-declare divide(a: number, b: number): Result<number, DivError>;
+declare function getUserInput(): Result<string, InputError>;
+declare function parseNum(str: string): Result<number, ParseError>;
+declare function divide(a: number, b: number): Result<number, DivError>;
 
 const divide100 = () =>
     result(function*() {
