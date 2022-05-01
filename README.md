@@ -1,6 +1,6 @@
 # Overture
 <p align="center">
-  <img src="docs/overture.png" />
+  <img src="docs/overture.png" width="250px" height="250px"/>
 </p>
 
 Overture is a collection of TypeScript packages heavily inspired by Rust and F#.
