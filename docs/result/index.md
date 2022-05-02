@@ -69,11 +69,11 @@ const divide100 = () =>
         return divResult;
     });
 
-divide100(50)
+divide100()
     .mapOrElse(
         // could also have logic here to deal with each individual case
         err => console.log(`We had an error ${err}!`), 
-        val => console.log(`100 divided by 50 is ${val}!`);
+        val => console.log(`100 divided by 50 is ${val}!`)
     );
     
 ```
