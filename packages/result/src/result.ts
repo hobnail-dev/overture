@@ -12,11 +12,6 @@ export type Err<E, A = never> = ErrImpl<A, E>;
 
 abstract class ResultImpl<A = never, E = never> {
     abstract [Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any>;
-    readonly val?: A = undefined;
-
-    readonly err?: E = undefined;
-
-    readonly stack?: string = undefined;
 
     abstract isOk(): this is Ok<A, E>;
     abstract isErr(): this is Err<E, A>;
@@ -458,11 +453,11 @@ abstract class ResultImpl<A = never, E = never> {
      * @example
      * const x: Result<number, string> = Ok(5).inspect(console.log); // prints 5
      * expect(x).toBeInstanceOf(Result);
-     * expect(x.val).toEqual(5);
+     * expect(x.unwrap()).toEqual(5);
      *
      * const y: Result<number, string> = Err("oops").inspect(console.log); // doesn't print
      * expect(y).toBeInstanceOf(Result);
-     * expect(y.err).toEqual("oops");
+     * expect(y.unwrapErr()).toEqual("oops");
      */
     abstract inspect(fn: (a: A) => void): Result<A, E>;
 
@@ -477,11 +472,11 @@ abstract class ResultImpl<A = never, E = never> {
      * @example
      * const x: Result<number, string> = Ok(5).inspectErr(console.log); // doesn't print
      * expect(x).toBeInstanceOf(Result);
-     * expect(x.val).toEqual(5);
+     * expect(x.unwrap()).toEqual(5);
      *
      * const y: Result<number, string> = Err("oops").inspectErr(console.log); // prints "oops"
      * expect(y).toBeInstanceOf(Result);
-     * expect(y.err).toEqual("oops");
+     * expect(y.unwrapErr()).toEqual("oops");
      */
     abstract inspectErr(fn: (e: E) => void): Result<A, E>;
 
@@ -527,16 +522,16 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
         /**
          * this: Result<A, E>
          *
-         * val: A | undefined
+         * val: A
          *
          * ---
-         * The raw `Ok` value inside the `Result<A, E>`.
+         * The `Ok` value inside the `Result<A, E>`.
          * @example
          * const x = Ok(3);
-         * expect(x.val).toEqual(3);
          *
-         * const y = Err("oops");
-         * expect(y.val).toBeUndefined();
+         * if (x.isOk()) {
+         *   console.log(x.val); // only available when Result is Ok.
+         * }
          */
         readonly val: A
     ) {}
@@ -573,7 +568,7 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
      * const val = Ok(5);
      * expect(val.isOk()).toBe(true);
      */
-    isOk(): this is Ok<A> {
+    isOk(): this is Ok<A, E> {
         return true;
     }
 
@@ -593,7 +588,7 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
     }
 
     isOkWith(predicate: (a: A) => boolean): boolean {
-        return predicate(this.val!);
+        return predicate(this.val);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -642,15 +637,15 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
     }
 
     mapOr<B>(b: B, fn: (a: A) => B): B {
-        return fn(this.val!);
+        return fn(this.val);
     }
 
     mapOrElse<B>(errFn: (b: E) => B, okFn: (a: A) => B): B {
-        return okFn(this.val!);
+        return okFn(this.val);
     }
 
     andThen<B, F>(fn: (a: A) => Result<B, F>): Result<B, F> {
-        return fn(this.val!);
+        return fn(this.val);
     }
 
     forEach(fn: (a: A) => void): void {
@@ -725,7 +720,7 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
     collectNullable<B>(
         fn: (a: A) => B | null | undefined
     ): Result<B, E> | null | undefined {
-        const x = fn(this.val!);
+        const x = fn(this.val);
         if (x == null) return x as any;
 
         return Ok(x);
@@ -742,10 +737,10 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
          * The raw `Err` value, inside the `Result<A, E>`.
          * @example
          * const x = Err(3);
-         * expect(x.err).toEqual(3);
          *
-         * const y = Ok("hello");
-         * expect(y.err).toBeUndefined();
+         * if (x.isErr()) {
+         *   console.log(x.err); // only available when Result is Err.
+         * }
          */
         readonly err: E,
         /**
@@ -804,7 +799,7 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
      * const val = Err("oh no!");
      * expect(val.isErr()).toBe(true);
      */
-    isErr(): this is Err<E> {
+    isErr(): this is Err<E, A> {
         return true;
     }
 
@@ -814,7 +809,7 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
     }
 
     isErrWith(predicate: (e: E) => boolean): boolean {
-        return predicate(this.err!);
+        return predicate(this.err);
     }
 
     unwrap(): A {
@@ -831,7 +826,7 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
     }
 
     unwrapOrElse(fn: (e: E) => A): A {
-        return fn(this.err!);
+        return fn(this.err);
     }
 
     unwrapErr(): E {
@@ -872,7 +867,7 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     mapOrElse<B>(errFn: (b: E) => B, okFn: (a: A) => B): B {
-        return errFn(this.err!);
+        return errFn(this.err);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
