@@ -838,7 +838,7 @@ export const asyncResult = <A, E, B, R extends YieldR<A, E>>(
 
     function run(
         state: IteratorYieldResult<R> | IteratorReturnResult<B>
-    ): AsyncResult<R["val"], R["err"]> {
+    ): AsyncResult<A, E> {
         if (state.done) {
             return AsyncOk(state.value) as any;
         }

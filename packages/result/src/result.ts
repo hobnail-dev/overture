@@ -993,7 +993,7 @@ export const result = <A, E, B, R extends YieldR<A, E>>(
 
     function run(
         state: IteratorYieldResult<R> | IteratorReturnResult<B>
-    ): Result<B, R["err"]> {
+    ): Result<B, E> {
         if (state.done) {
             return Ok(state.value);
         }
