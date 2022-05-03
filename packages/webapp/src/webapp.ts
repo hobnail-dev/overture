@@ -4,6 +4,8 @@ import express, {
     Request,
     RequestHandler,
     Response,
+    Router,
+    RouterOptions,
 } from "express";
 
 export type HandlerContext<T> = T & {
@@ -28,7 +30,9 @@ const createHandler =
     };
 
 export class WebAppRouter<T = {}> {
-    private constructor(readonly middlewares: ((e: Express, t: T) => void)[]) {}
+    private constructor(
+        private readonly middlewares: ((e: Router, t: T) => void)[]
+    ) {}
 
     static new = <T>(): WebAppRouter<T> => new WebAppRouter([]);
 
@@ -38,7 +42,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.get(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.get(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -48,7 +52,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.post(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.post(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -58,7 +62,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.patch(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.patch(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -68,7 +72,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.put(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.put(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -78,7 +82,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.delete(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.delete(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -88,7 +92,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.head(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.head(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -98,7 +102,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.options(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.options(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -108,7 +112,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.connect(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.connect(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -118,7 +122,7 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.trace(path, createHandler(handler, k)),
+            (e: Router, k: K) => e.trace(path, createHandler(handler, k)),
         ] as any);
     }
 
@@ -127,8 +131,25 @@ export class WebAppRouter<T = {}> {
     ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Express, k: K) => e.use(createHandler(handler, k)),
+            (e: Router, k: K) => e.use(createHandler(handler, k)),
         ] as any);
+    }
+
+    route<K = {}>(
+        path: string,
+        router: WebAppRouter<K>,
+        options?: RouterOptions
+    ): WebAppRouter<{ [k in keyof (T & K)]: (T & K)[k] }> {
+        return new WebAppRouter([
+            ...this.middlewares,
+            (e: Router, k: K) => e.use(path, router.build(k, options)),
+        ] as any);
+    }
+
+    build(t: T, options?: RouterOptions): Router {
+        const router = Router(options);
+        this.middlewares.forEach(fn => fn(router, t));
+        return router;
     }
 }
 
@@ -239,11 +260,13 @@ export class WebApp<T = {}> {
     }
 
     route<K = {}>(
-        cfgRoutes: (router: WebAppRouter) => WebAppRouter<K>
+        path: string,
+        router: WebAppRouter<K>,
+        options?: RouterOptions
     ): WebApp<{ [k in keyof (T & K)]: (T & K)[k] }> {
         return new WebApp([
             ...this.middlewares,
-            ...cfgRoutes(WebAppRouter.new()).middlewares,
+            (e: Express, k: K) => e.use(path, router.build(k, options)),
         ] as any);
     }
 

@@ -1,17 +1,16 @@
 import supertest from "supertest";
 
-import { WebApp } from "./webapp";
+import { WebApp, WebAppRouter } from "./webapp";
 import { useTestWebApi } from "./webappFactory";
 
 describe("Captures path params", () => {
-    const webApp = WebApp.new().route(router =>
-        router
-            .get("/hello", ({ res }) => res.send("hello"))
-            .get("/hello/:name", ({ req, res }) =>
-                res.status(200).send(req.params)
-            )
-            .get("/:id", ({ req, res }) => res.status(200).send(req.params))
-    );
+    const helloRouter = WebAppRouter.new()
+        .get("/", ({ res }) => res.send("hello"))
+        .get("/:name", ({ req, res }) => res.status(200).send(req.params));
+
+    const webApp = WebApp.new()
+        .route("/hello", helloRouter)
+        .get("/:id", ({ req, res }) => res.status(200).send(req.params));
 
     const testServer = useTestWebApi({ builder: webApp, dependencies: {} });
 
