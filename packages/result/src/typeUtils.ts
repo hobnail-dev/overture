@@ -1,9 +1,17 @@
-import { Err, Ok, Result } from "./result";
+export type YieldR<A, E, T extends string = string> = {
+    type: T;
+    val: A;
+    err: E;
+    obj: any;
+};
 
-export type OkType<
-    T extends Result<A, E>,
-    A = never,
-    E = never
-> = T extends Ok<A> ? T["val"] : never;
-
-export type ErrType<T extends Result<A, E>, A = never, E = never> = T["err"];
+export const YieldR = {
+    create<A, E, T extends string>(type: T, obj: any): YieldR<A, E, T> {
+        return {
+            type,
+            obj,
+            err: 0 as any,
+            val: 0 as any,
+        };
+    },
+};

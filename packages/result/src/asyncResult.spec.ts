@@ -209,13 +209,14 @@ describe("AsyncResult", () => {
     describe(".trace", () => {
         it("Adds a stack trace if the AsyncResult is an Err", async () => {
             const res = await AsyncErr("no!").trace();
-            expect(res.stack).toBeDefined();
-            expect(res.stack?.length).toBeGreaterThan(0);
+
+            expect((res as any).stack).toBeDefined();
+            expect((res as any).stack?.length).toBeGreaterThan(0);
         });
 
         it("Does nothing if the AsyncResult is Ok", async () => {
             const res = await AsyncOk(1).trace();
-            expect(res.stack).toBeUndefined();
+            expect((res as any).stack).toBeUndefined();
         });
     });
 
@@ -554,10 +555,12 @@ describe("AsyncResult", () => {
     describe("Computation expression", () => {
         it("Happy path works correctly", async () => {
             const foo = await asyncResult(function* () {
-                const a: number = yield* Async(5);
-                const b: number = yield* Async(Ok(3));
-                const c: number = yield* AsyncOk(2);
-                const d: number = yield* Ok(2);
+                const a: number = yield* Promise.resolve(5);
+                const b: number = yield* Promise.resolve(
+                    Ok<number, boolean>(3)
+                );
+                const c: number = yield* AsyncOk<number, string[]>(2);
+                const d: number = yield* Ok<number, File>(2);
 
                 return a + b + c + d;
             });
@@ -597,7 +600,7 @@ describe("AsyncResult", () => {
                 Async(Err("oops"));
 
             const foo = await asyncResult(function* () {
-                const a = yield* Ok<number, string>(1);
+                const a = yield* Ok<number, boolean>(1);
                 const b = yield* oops();
 
                 return a + b;
@@ -606,7 +609,7 @@ describe("AsyncResult", () => {
             expect(foo.unwrapErr()).toEqual("oops");
 
             const bar = await asyncResult(function* () {
-                const a: number = yield* Ok<number, string>(5);
+                const a: number = yield* Ok<number, boolean>(5);
                 const b: number = yield* AsyncErr("oh no");
                 const c: number = yield* Async(2);
 
@@ -616,9 +619,9 @@ describe("AsyncResult", () => {
             expect(bar.unwrapErr()).toEqual("oh no");
 
             const baz = await asyncResult(function* () {
-                const a: number = yield* AsyncOk(5);
+                const a: number = yield* AsyncOk<number, false>(5);
                 const b: number = yield* Err("aaa");
-                const c: number = yield* Ok(2);
+                const c: number = yield* Ok<number, string[]>(2);
 
                 return a + b + c;
             });

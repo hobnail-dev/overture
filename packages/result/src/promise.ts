@@ -1,9 +1,12 @@
 import { Result } from "./result";
+import { YieldR } from "./typeUtils";
 
 declare global {
     interface Promise<T> {
         [Symbol.iterator](): Generator<
-            Promise<T>,
+            T extends Result<infer A, infer E>
+                ? YieldR<A, E, "Promise">
+                : YieldR<T, never, "Promise">,
             T extends Result<infer A, any> ? A : T,
             any
         >;
@@ -11,9 +14,11 @@ declare global {
 }
 
 Promise.prototype[Symbol.iterator] = function* <T>(): Generator<
-    Promise<T>,
+    T extends Result<infer A, infer E>
+        ? YieldR<A, E, "Promise">
+        : YieldR<T, never, "Promise">,
     T extends Result<infer A, any> ? A : T,
     any
 > {
-    return yield this;
+    return yield YieldR.create("Promise", this) as any;
 };

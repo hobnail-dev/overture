@@ -1,6 +1,6 @@
 import { AsyncResult } from "./asyncResult";
 import { Exn } from "./exn";
-import { ErrType } from "./typeUtils";
+import { YieldR } from "./typeUtils";
 
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
@@ -10,11 +10,13 @@ export type Result<A, E> = Ok<A, E> | Err<E, A>;
 export type Ok<A, E = never> = OkImpl<A, E>;
 export type Err<E, A = never> = ErrImpl<A, E>;
 
-export abstract class ResultImpl<A = never, E = never> {
-    abstract [Symbol.iterator](): Generator<ResultImpl<A, E>, A, any>;
-    abstract readonly val?: A;
+abstract class ResultImpl<A = never, E = never> {
+    abstract [Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any>;
+    readonly val?: A = undefined;
 
     readonly err?: E = undefined;
+
+    readonly stack?: string = undefined;
 
     abstract isOk(): this is Ok<A, E>;
     abstract isErr(): this is Err<E, A>;
@@ -539,8 +541,8 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
         readonly val: A
     ) {}
 
-    *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
-        return yield this as any;
+    *[Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any> {
+        return yield YieldR.create("Result", this);
     }
 
     /**
@@ -772,8 +774,8 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
         return new ErrImpl(error, stack) as any;
     }
 
-    *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
-        return yield this as any;
+    *[Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any> {
+        return yield YieldR.create("Result", this);
     }
 
     /**
@@ -1008,21 +1010,23 @@ export const Err = ErrImpl.err;
  *   return user.unwrap().name;
  * })();
  */
-export const result = <A, E, B, R extends Result<A, E>>(
+export const result = <A, E, B, R extends YieldR<A, E>>(
     genFn: () => Generator<R, B, A>
-): Result<B, NonNullable<ErrType<R, A, E>>> => {
+): Result<B, R["err"]> => {
     const iterator = genFn();
     let state = iterator.next();
 
     function run(
         state: IteratorYieldResult<R> | IteratorReturnResult<B>
-    ): Result<B, ErrType<R, A, E>> {
+    ): Result<B, R["err"]> {
         if (state.done) {
             return Ok(state.value);
         }
 
         const { value } = state;
-        return value.andThen(val => run(iterator.next(val))) as any;
+        return (value.obj as Result<A, E>).andThen(val =>
+            run(iterator.next(val))
+        ) as any;
     }
 
     return run(state) as any;

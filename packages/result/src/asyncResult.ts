@@ -1,8 +1,8 @@
 import "./promise";
 
 import { Exn } from "./exn";
-import { Err, Ok, Result, ResultImpl } from "./result";
-import { ErrType, OkType } from "./typeUtils";
+import { Err, Ok, Result } from "./result";
+import { YieldR } from "./typeUtils";
 
 /**
  * `AsyncResult<A, E>` is the type used for returning and propagating asynchronous errors.
@@ -115,8 +115,8 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
         return this.inner.then(onfulfilled, onrejected);
     }
 
-    *[Symbol.iterator](): Generator<AsyncResult<A, E>, A, any> {
-        return yield this;
+    *[Symbol.iterator](): Generator<YieldR<A, E, "AsyncResult">, A, any> {
+        return yield YieldR.create("AsyncResult", this);
     }
 
     /**
@@ -781,6 +781,10 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
  * expect(await a).toEqual(await b);
  */
 export const Async = async <A>(a: A): Promise<A> => a;
+/**
+ * An Asynchronous computation. Alias to Promise.
+ */
+export type Async<A> = Promise<A>;
 
 /**
  * `AsyncOk: A -> AsyncResult<A, E>`
@@ -795,6 +799,7 @@ export const Async = async <A>(a: A): Promise<A> => a;
  */
 export const AsyncOk = <A = never, E = never>(a: A): AsyncResult<A, E> =>
     AsyncResult.fromResult(Ok(a));
+export type AsyncOk<A, E = never> = AsyncResult<A, E>;
 
 /**
  * `AsyncErr: E -> AsyncResult<A, E>`
@@ -809,6 +814,8 @@ export const AsyncOk = <A = never, E = never>(a: A): AsyncResult<A, E> =>
  */
 export const AsyncErr = <A = never, E = never>(e: E): AsyncResult<A, E> =>
     AsyncResult.fromResult(Err(e));
+
+export type AsyncErr<E, A = never> = AsyncResult<A, E>;
 
 /**
  * `asyncResult: Error Propagation`
@@ -838,54 +845,44 @@ export const AsyncErr = <A = never, E = never>(e: E): AsyncResult<A, E> =>
  *     return response.status;
  *   });
  */
-export const asyncResult = <A, E, B, R extends ResultImpl<A, E>>(
-    genFn: () => Generator<
-        R | Promise<A> | Promise<R> | AsyncResult<A, NonNullable<R["err"]>>,
-        B,
-        A
-    >
-): AsyncResult<B, NonNullable<R["err"]>> => {
+export const asyncResult = <A, E, B, R extends YieldR<A, E>>(
+    genFn: () => Generator<R, B, A>
+): AsyncResult<B, R["err"]> => {
     const iterator = genFn();
     let state = iterator.next();
 
     function run(
-        state:
-            | IteratorYieldResult<
-                  | R
-                  | Promise<A>
-                  | Promise<R>
-                  | AsyncResult<A, NonNullable<R["err"]>>
-              >
-            | IteratorReturnResult<B>
-    ): Promise<ResultImpl<B, R["err"]>> {
+        state: IteratorYieldResult<R> | IteratorReturnResult<B>
+    ): AsyncResult<R["val"], R["err"]> {
         if (state.done) {
-            return Promise.resolve(Ok(state.value));
+            return AsyncOk(state.value) as any;
         }
 
         const { value } = state;
 
-        if (value instanceof AsyncResult) {
-            return value.inner.then(x =>
-                x.andThen(val => run(iterator.next(val)) as any)
-            ) as any;
-        }
+        const normalize = (): AsyncResult<A, E> => {
+            switch (value.type) {
+                case "AsyncResult":
+                    return value.obj;
 
-        if (value instanceof Promise) {
-            return value.then(x => {
-                if (Result.instanceof(x)) {
-                    return x.andThen(
-                        val => run(iterator.next(val)) as any
-                    ) as any;
-                }
+                case "Promise":
+                    const prom = value.obj as Promise<A | Result<A, E>>;
+                    const promRes = prom.then(x =>
+                        Result.instanceof<A, E>(x) ? x : Ok(x)
+                    );
 
-                return value.then(val => run(iterator.next(val as A)));
-            });
-        }
+                    return AsyncResult.from(promRes);
 
-        return Promise.resolve(
-            value.andThen(val => run(iterator.next(val)) as any)
-        ) as any;
+                case "Result":
+                    return AsyncResult.fromResult(value.obj);
+
+                default:
+                    throw new Error("Unrecognized Yield object");
+            }
+        };
+
+        return normalize().andThen(val => run(iterator.next(val)));
     }
 
-    return AsyncResult.from(run(state) as any) as any;
+    return run(state) as any;
 };
