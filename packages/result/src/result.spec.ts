@@ -2,26 +2,24 @@ import { AsyncResult } from "./asyncResult";
 import { Err, Ok, Result, result } from "./result";
 
 describe("Result", () => {
-    describe("::ok", () => {
+    describe("Ok", () => {
         it("Creates an Result that is Ok", () => {
-            const x = Result.ok(1);
+            const x = Ok(1);
 
-            expect(x).toBeInstanceOf(Result);
             expect(x.isOk()).toBe(true);
             expect(x.isErr()).toBe(false);
         });
 
         it("Creates a Result containing void", () => {
-            const x: Result<void, string> = Result.ok();
+            const x: Result<void, string> = Ok();
             expect(x.unwrap()).toBeUndefined(); // void evaluates to undefined
         });
     });
 
-    describe("::err", () => {
+    describe("Err", () => {
         it("Creates an Result that contains an Err", () => {
-            const x = Result.err("oops");
+            const x = Err("oops");
 
-            expect(x).toBeInstanceOf(Result);
             expect(x.isOk()).toBe(false);
             expect(x.isErr()).toBe(true);
         });
@@ -31,7 +29,7 @@ describe("Result", () => {
         it("Creates an Ok Result from a function that might throw but didn't", () => {
             const x = Result.try("something", () => "didnt throw");
 
-            expect(x.val).toEqual("didnt throw");
+            expect(x.unwrap()).toEqual("didnt throw");
         });
 
         it("Creates an Err Result with an Error from a function that throws", () => {
@@ -39,8 +37,8 @@ describe("Result", () => {
                 throw new Error("oh no");
             });
 
-            expect(x.err?.type).toEqual("OhNo");
-            expect(x.err?.message).toEqual("oh no");
+            expect(x.unwrapErr().type).toEqual("OhNo");
+            expect(x.unwrapErr().message).toEqual("oh no");
         });
 
         it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
@@ -49,8 +47,8 @@ describe("Result", () => {
                 throw "oops";
             });
 
-            expect(x.err?.type).toEqual("Oops");
-            expect(x.err?.message).toEqual("oops");
+            expect(x.unwrapErr().type).toEqual("Oops");
+            expect(x.unwrapErr().message).toEqual("oops");
         });
     });
 
@@ -90,7 +88,7 @@ describe("Result", () => {
         });
 
         it("Returns false if Result is an Err", () => {
-            const a = Err<number, number>(2);
+            const a = Err(2);
             expect(a.isOkWith(() => true)).toBe(false);
         });
     });
@@ -107,7 +105,7 @@ describe("Result", () => {
         });
 
         it("Returns false if Result is Ok", () => {
-            const a = Ok<number, number>(2);
+            const a = Ok(2);
             expect(a.isErrWith(() => true)).toBe(false);
         });
     });
@@ -131,7 +129,8 @@ describe("Result", () => {
         });
 
         it("The default value if the Result is Err", () => {
-            const res = Err<number, string>("oops").unwrapOr(2);
+            const err: Result<number, string> = Err("oops");
+            const res = err.unwrapOr(2);
             expect(res).toEqual(2);
         });
     });
@@ -140,12 +139,14 @@ describe("Result", () => {
         const count = (x: string) => x.length;
 
         it("Returns the value of the Result when it is Ok", () => {
-            const res = Ok(2).unwrapOrElse(count);
+            const ok: Result<number, string> = Ok(2);
+            const res = ok.unwrapOrElse(count);
             expect(res).toEqual(2);
         });
 
         it("The value from the callback if the Result is Err", () => {
-            const res = Err<number, string>("foo").unwrapOrElse(count);
+            const err: Result<number, string> = Err("foo");
+            const res = err.unwrapOrElse(count);
             expect(res).toEqual(3);
         });
     });
@@ -193,37 +194,37 @@ describe("Result", () => {
     describe(".trace", () => {
         it("Adds a stack trace if the Result is an Err", () => {
             const res = Err("no!").trace();
-            expect(res.stack).toBeDefined();
-            expect(res.stack?.length).toBeGreaterThan(0);
+            expect((res as Err<string>).stack).toBeDefined();
+            expect((res as Err<string>).stack?.length).toBeGreaterThan(0);
         });
 
         it("Does nothing if the Result is Ok", () => {
             const res = Ok(1).trace();
-            expect(res.stack).toBeUndefined();
+            expect((res as any as Err<string>).stack).toBeUndefined();
         });
     });
 
     describe(".map", () => {
         it("Executes a function against the value of the Result when it is Ok", () => {
             const res = Ok(1).map(x => x * 2);
-            expect(res.val).toEqual(2);
+            expect(res.unwrap()).toEqual(2);
         });
 
         it("Does nothing when the Result is Err", () => {
-            const res = Err<number, string>("oops").map(x => x * 2);
-            expect(res.err).toEqual("oops");
+            const res = Err("oops").map(x => x * 2);
+            expect(res.unwrapErr()).toEqual("oops");
         });
     });
 
     describe(".mapErr", () => {
         it("Executes a function against the value of the Result when it is Err", () => {
             const res = Err(1).mapErr(x => x * 2);
-            expect(res.err).toEqual(2);
+            expect(res.unwrapErr()).toEqual(2);
         });
 
         it("Does nothing when the Result is Ok", () => {
-            const res = Ok<string, number>("hello").mapErr(x => x * 2);
-            expect(res.val).toEqual("hello");
+            const res = Ok("hello").mapErr(x => x * 2);
+            expect(res.unwrap()).toEqual("hello");
         });
     });
 
@@ -259,18 +260,18 @@ describe("Result", () => {
     describe(".andThen", () => {
         it("Executes a Result returning function against the value of the Result when it is Ok, returning a flattened Result", () => {
             const res = Ok(1).andThen(x => Ok(x * 2));
-            expect(res.val).toEqual(2);
+            expect(res.unwrap()).toEqual(2);
         });
 
         it("Does nothing when the Result is Err", () => {
-            const res = Err<number, string>("oops").andThen(x => Ok(x * 2));
-            expect(res.err).toEqual("oops");
+            const res = Err("oops").andThen(x => Ok(x * 2));
+            expect(res.unwrapErr()).toEqual("oops");
         });
 
         it("Returns the err of the Result from the binding function", () => {
             const error = { type: "coolErr", msg: "oh no!" };
-            const res = Ok<number, string>(1).andThen(() => Err(error));
-            expect(res.err).toEqual(error);
+            const res = Ok(1).andThen(() => Err(error));
+            expect(res.unwrapErr()).toEqual(error);
         });
     });
 
@@ -284,7 +285,7 @@ describe("Result", () => {
 
         it("Doesn't do anything if the Result is an Err", () => {
             let x = 0;
-            Err<number, number>(5).forEach(n => (x = n));
+            Err(5).forEach(n => (x = n));
 
             expect(x).toEqual(0);
         });
@@ -300,7 +301,7 @@ describe("Result", () => {
 
         it("Doesn't do anything if the Result is an Ok", () => {
             let x = 0;
-            Ok<number, number>(5).forEachErr(n => (x = n));
+            Ok(5).forEachErr(n => (x = n));
 
             expect(x).toEqual(0);
         });
@@ -308,7 +309,7 @@ describe("Result", () => {
 
     describe(".to", () => {
         it("pipes the Result instance to a function", () => {
-            const res = Ok(1).to(x => x.val);
+            const res = Ok(1).to(x => x.unwrap());
             expect(res).toEqual(1);
         });
     });
@@ -319,7 +320,7 @@ describe("Result", () => {
             expect(arr.length).toEqual(1);
             expect(arr[0]).toEqual("one");
 
-            const empty = Err<number, string>("oops").toArray();
+            const empty = Err("oops").toArray();
             expect(empty.length).toEqual(0);
         });
     });
@@ -330,7 +331,7 @@ describe("Result", () => {
             expect(arr.length).toEqual(1);
             expect(arr[0]).toEqual("one");
 
-            const empty = Ok<number, string>(1).toErrArray();
+            const empty = Ok(1).toErrArray();
             expect(empty.length).toEqual(0);
         });
     });
@@ -341,7 +342,7 @@ describe("Result", () => {
             expect(x).toBeInstanceOf(AsyncResult);
 
             const y = await x;
-            expect(y.val).toEqual(1);
+            expect(y.unwrap()).toEqual(1);
         });
     });
 
@@ -351,7 +352,7 @@ describe("Result", () => {
             const b = Ok(true);
 
             const ab = a.and(b);
-            expect(ab.val).toEqual([1, true]);
+            expect(ab.unwrap()).toEqual([1, true]);
         });
 
         it("returns the second Result if the first is Ok and the second is Err", () => {
@@ -377,8 +378,8 @@ describe("Result", () => {
             const ab = a.and(b);
             const ba = b.and(a);
 
-            expect(ab.err).toEqual("oops");
-            expect(ba.err).toEqual("oh no!");
+            expect(ab.unwrapErr()).toEqual("oops");
+            expect(ba.unwrapErr()).toEqual("oh no!");
         });
     });
 
@@ -446,7 +447,7 @@ describe("Result", () => {
         });
 
         it("Returns false if Result is an Err", () => {
-            const a = Err<number, number>(2);
+            const a: Result<number, number> = Err(2);
             expect(a.contains(2)).toBe(false);
         });
     });
@@ -463,7 +464,7 @@ describe("Result", () => {
         });
 
         it("Returns false if Result is an Ok", () => {
-            const a = Ok<number, number>(2);
+            const a: Result<number, number> = Ok(2);
             expect(a.containsErr(2)).toBe(false);
         });
     });
@@ -473,12 +474,12 @@ describe("Result", () => {
             let foo = 0;
             const bar = Ok(5).inspect(x => (foo = x * 2));
             expect(foo).toEqual(10);
-            expect(bar.val).toEqual(5);
+            expect(bar.unwrap()).toEqual(5);
         });
 
         it("Does not execute the given callback if the Result is an Err", () => {
             let fn = jest.fn();
-            Err<number, string>("bla").inspect(fn);
+            Err("bla").inspect(fn);
             expect(fn).toHaveBeenCalledTimes(0);
         });
     });
@@ -488,12 +489,12 @@ describe("Result", () => {
             let foo = 0;
             const bar = Err(5).inspectErr(x => (foo = x * 2));
             expect(foo).toEqual(10);
-            expect(bar.err).toEqual(5);
+            expect(bar.unwrapErr()).toEqual(5);
         });
 
         it("Does not execute the given callback if the Result is an Err", () => {
             let fn = jest.fn();
-            Ok<string, number>("bla").inspectErr(fn);
+            Ok("bla").inspectErr(fn);
             expect(fn).toHaveBeenCalledTimes(0);
         });
     });
@@ -501,7 +502,7 @@ describe("Result", () => {
     describe(".collectPromise", () => {
         it("Executes a Promise returning function against the value of the Result when it is Ok, returning the Promise with it's value wrapped in a Result", async () => {
             const a = await Ok(1).collectPromise(x => Promise.resolve(x * 2));
-            expect(a.val).toEqual(2);
+            expect(a.unwrap()).toEqual(2);
         });
 
         it("Wraps the Result in a Promise when it is an Err", async () => {
@@ -509,7 +510,7 @@ describe("Result", () => {
                 Promise.resolve(x * 2)
             );
 
-            expect(res.err).toEqual("oops");
+            expect(res.unwrapErr()).toEqual("oops");
         });
     });
 
@@ -531,8 +532,27 @@ describe("Result", () => {
         it("Returns the Result if it is Err", () => {
             const res = Err("oops").collectNullable(evenOrNull);
 
-            expect(res).toBeInstanceOf(Result);
             expect(res!.unwrapErr()).toEqual("oops");
+        });
+    });
+
+    describe("::instanceof", () => {
+        it("Returns true if value is an instance of Result", () => {
+            const a = Ok(1);
+            const b = Err("one");
+            const c = {};
+
+            expect(Result.instanceof(a)).toBe(true);
+            expect(Result.instanceof(b)).toBe(true);
+            expect(Result.instanceof(c)).toBe(false);
+        });
+
+        it("Returns false if the value is not an instance of Result", () => {
+            const a = [{}, "a", 1, false, new Map()]
+                .map(Result.instanceof)
+                .every(x => x === false);
+
+            expect(a).toBe(true);
         });
     });
 
@@ -542,13 +562,13 @@ describe("Result", () => {
                 .map(x => Promise.resolve(x * 2))
                 .to(Result.transposePromise);
 
-            expect(a.val).toEqual(2);
+            expect(a.unwrap()).toEqual(2);
 
             const res = await Err("oops")
                 .map(x => Promise.resolve(x * 2))
                 .to(Result.transposePromise);
 
-            expect(res.err).toEqual("oops");
+            expect(res.unwrapErr()).toEqual("oops");
         });
     });
 
@@ -572,7 +592,6 @@ describe("Result", () => {
                 .map(evenOrNull)
                 .to(Result.transposeNullable);
 
-            expect(res).toBeInstanceOf(Result);
             expect(res!.unwrapErr()).toEqual("oops");
         });
     });
@@ -580,10 +599,10 @@ describe("Result", () => {
     describe("::flatten", () => {
         it("Converts from Result<Result<A, E> F> to Result<A, E | F>", () => {
             const x = Ok(Ok("hello")).to(Result.flatten);
-            expect(x.val).toEqual("hello");
+            expect(x.unwrap()).toEqual("hello");
 
             const y = Ok(Err(6)).to(Result.flatten);
-            expect(y.err).toEqual(6);
+            expect(y.unwrapErr()).toEqual(6);
         });
     });
 
@@ -597,7 +616,7 @@ describe("Result", () => {
                 return a + b + c;
             });
 
-            expect(res.val).toEqual(30);
+            expect(res.unwrap()).toEqual(30);
         });
 
         it("Failure path works correctly", () => {
@@ -609,7 +628,7 @@ describe("Result", () => {
                 return a + b + c;
             });
 
-            expect(res.err).toEqual("oops");
+            expect(res.unwrapErr()).toEqual("oops");
         });
 
         it("Resolves multiple error types", () => {
@@ -622,8 +641,7 @@ describe("Result", () => {
                 return a + b + c + d;
             });
 
-            expect(res).toBeInstanceOf(Result);
-            expect(res.err).toEqual({ kind: "B", val: "oh no" });
+            expect(res.unwrapErr()).toEqual({ kind: "B", val: "oh no" });
         });
     });
 });

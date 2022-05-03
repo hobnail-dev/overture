@@ -1,7 +1,8 @@
 import "./promise";
 
 import { Exn } from "./exn";
-import { Err, Ok, Result } from "./result";
+import { Err, Ok, Result, ResultImpl } from "./result";
+import { ErrType, OkType } from "./typeUtils";
 
 /**
  * `AsyncResult<A, E>` is the type used for returning and propagating asynchronous errors.
@@ -43,7 +44,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * expecy(await y.unwrap()).toEqual(3);
      */
     static fromPromise<A, E = never>(promise: Promise<A>): AsyncResult<A, E> {
-        return new AsyncResult(promise.then(Result.ok));
+        return new AsyncResult(promise.then(Ok));
     }
 
     /**
@@ -97,12 +98,10 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
                     ? [e.message, e.stack]
                     : [stringify(e), new Error().stack];
 
-            return Result.err({ type: exnType, message }, stack);
+            return Err({ type: exnType, message }, stack);
         };
 
-        const x: Promise<Result<A, Exn<T>>> = fn()
-            .then(Result.ok)
-            .catch(catcher);
+        const x: Promise<Result<A, Exn<T>>> = fn().then(Ok).catch(catcher);
 
         return AsyncResult.from(x);
     }
@@ -327,7 +326,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * expect(await c.stack()).toBeDefined();
      */
     stack(): Promise<string | undefined> {
-        return this.inner.then(x => x.stack);
+        return this.inner.then(x => (x.isErr() ? x.stack : undefined));
     }
 
     /**
@@ -546,7 +545,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
             if (a.isOk()) {
                 const b = await r;
                 if (b.isOk()) {
-                    return Result.ok([a.val!, b.val!]);
+                    return Ok([a.val, b.val]);
                 }
 
                 return b;
@@ -624,7 +623,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
                 return a;
             }
 
-            return fn(a.err!);
+            return fn(a.unwrapErr());
         });
 
         return AsyncResult.from(prom);
@@ -730,7 +729,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
                     return this as any;
                 }
 
-                return fn(x.val!).then(Result.ok);
+                return fn(x.unwrap()).then(Ok);
             })
         );
     }
@@ -839,12 +838,9 @@ export const AsyncErr = <A = never, E = never>(e: E): AsyncResult<A, E> =>
  *     return response.status;
  *   });
  */
-export const asyncResult = <A, E, B, R extends Result<A, E>>(
+export const asyncResult = <A, E, B, R extends ResultImpl<A, E>>(
     genFn: () => Generator<
-        | R
-        | Promise<R>
-        | Promise<A>
-        | AsyncResult<NonNullable<R["val"]>, NonNullable<R["err"]>>,
+        R | Promise<A> | Promise<R> | AsyncResult<A, NonNullable<R["err"]>>,
         B,
         A
     >
@@ -856,12 +852,12 @@ export const asyncResult = <A, E, B, R extends Result<A, E>>(
         state:
             | IteratorYieldResult<
                   | R
-                  | Promise<R>
                   | Promise<A>
-                  | AsyncResult<NonNullable<R["val"]>, NonNullable<R["err"]>>
+                  | Promise<R>
+                  | AsyncResult<A, NonNullable<R["err"]>>
               >
             | IteratorReturnResult<B>
-    ): Promise<Result<B, R["err"]>> {
+    ): Promise<ResultImpl<B, R["err"]>> {
         if (state.done) {
             return Promise.resolve(Ok(state.value));
         }
@@ -871,13 +867,15 @@ export const asyncResult = <A, E, B, R extends Result<A, E>>(
         if (value instanceof AsyncResult) {
             return value.inner.then(x =>
                 x.andThen(val => run(iterator.next(val)) as any)
-            );
+            ) as any;
         }
 
         if (value instanceof Promise) {
             return value.then(x => {
-                if (x instanceof Result) {
-                    return x.andThen(val => run(iterator.next(val)) as any);
+                if (Result.instanceof(x)) {
+                    return x.andThen(
+                        val => run(iterator.next(val)) as any
+                    ) as any;
                 }
 
                 return value.then(val => run(iterator.next(val as A)));
@@ -886,8 +884,8 @@ export const asyncResult = <A, E, B, R extends Result<A, E>>(
 
         return Promise.resolve(
             value.andThen(val => run(iterator.next(val)) as any)
-        );
+        ) as any;
     }
 
-    return AsyncResult.from(run(state)) as any;
+    return AsyncResult.from(run(state) as any) as any;
 };

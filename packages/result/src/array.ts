@@ -209,7 +209,7 @@ Object.defineProperty(Array.prototype, "collectResult", {
 
             if (x.isErr()) return Err(x.err!);
 
-            res.push(x.val!);
+            res.push(x.unwrap());
         }
 
         return Ok(res);
@@ -237,7 +237,7 @@ Object.defineProperty(Array.prototype, "collectAsyncResult", {
 
                 if (x.isErr()) return Err(x.err!);
 
-                res.push(x.val!);
+                res.push(x.unwrap());
             }
 
             return Ok(res);
@@ -264,7 +264,7 @@ Object.defineProperty(Array, "partitionResults", {
 
         for (const r of results) {
             if (r.isOk()) oks.push(r.val);
-            else errs.push(r.err);
+            else errs.push(r.unwrapErr());
         }
 
         return [oks, errs] as any;
@@ -283,7 +283,7 @@ Object.defineProperty(Array, "partitionAsyncResults", {
 
         for (const r of rs) {
             if (r.isOk()) oks.push(r.val);
-            else errs.push(r.err);
+            else errs.push(r.unwrapErr());
         }
 
         return [oks, errs] as any;

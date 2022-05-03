@@ -41,7 +41,7 @@ describe("AsyncResult", () => {
             expect(x).toBeInstanceOf(AsyncResult);
 
             const y = await x;
-            expect(y.val).toEqual("didnt throw");
+            expect(y.unwrap()).toEqual("didnt throw");
         });
 
         it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
@@ -51,8 +51,8 @@ describe("AsyncResult", () => {
             expect(x).toBeInstanceOf(AsyncResult);
 
             const y = await x;
-            expect(y.err?.type).toEqual("Oh no!");
-            expect(y.err?.message).toEqual("oh no");
+            expect(y.unwrapErr().type).toEqual("Oh no!");
+            expect(y.unwrapErr().message).toEqual("oh no");
         });
 
         it("Creates an Err AsyncResult with an Error from a function that throws a value other than an Error", async () => {
@@ -61,8 +61,8 @@ describe("AsyncResult", () => {
                 throw "oops";
             });
 
-            expect(x.err?.type).toEqual("Oops");
-            expect(x.err?.message).toEqual("oops");
+            expect(x.unwrapErr().type).toEqual("Oops");
+            expect(x.unwrapErr().message).toEqual("oops");
         });
     });
 
@@ -119,7 +119,7 @@ describe("AsyncResult", () => {
         });
 
         it("Returns false if Result is Ok", () => {
-            const a = Ok<number, number>(2);
+            const a = Ok(2);
             expect(a.isErrWith(() => true)).toBe(false);
         });
     });
@@ -238,7 +238,7 @@ describe("AsyncResult", () => {
         });
 
         it("Does nothing when the Result is Ok", async () => {
-            const res = Ok<string, number>("hello").mapErr(x => x * 2);
+            const res = Ok("hello").mapErr(x => x * 2);
             expect(await res.unwrap()).toEqual("hello");
         });
     });
@@ -483,7 +483,7 @@ describe("AsyncResult", () => {
             let foo = 0;
             const bar = await AsyncOk(5).inspect(x => (foo = x * 2));
             expect(foo).toEqual(10);
-            expect(bar.val).toEqual(5);
+            expect(bar.unwrap()).toEqual(5);
         });
 
         it("Does not execute the given callback if the AsyncResult is an Err", async () => {
@@ -498,7 +498,7 @@ describe("AsyncResult", () => {
             let foo = 0;
             const bar = await AsyncErr(5).inspectErr(x => (foo = x * 2));
             expect(foo).toEqual(10);
-            expect(bar.err).toEqual(5);
+            expect(bar.unwrapErr()).toEqual(5);
         });
 
         it("Does not execute the given callback if the AsyncResult is an Err", async () => {
@@ -513,7 +513,7 @@ describe("AsyncResult", () => {
             const a = await AsyncOk(1).collectPromise(x =>
                 Promise.resolve(x * 2)
             );
-            expect(a.val).toEqual(2);
+            expect(a.unwrap()).toEqual(2);
         });
 
         it("Does nothing when AsyncResult is Err", async () => {
@@ -521,7 +521,7 @@ describe("AsyncResult", () => {
                 Promise.resolve(x * 2)
             );
 
-            expect(res.err).toEqual("oops");
+            expect(res.unwrapErr()).toEqual("oops");
         });
     });
 
@@ -531,23 +531,23 @@ describe("AsyncResult", () => {
                 .map(x => Promise.resolve(x * 2))
                 .to(AsyncResult.transposePromise);
 
-            expect(a.val).toEqual(2);
+            expect(a.unwrap()).toEqual(2);
 
             const res = await AsyncErr("oops")
                 .map(x => Promise.resolve(x * 2))
                 .to(AsyncResult.transposePromise);
 
-            expect(res.err).toEqual("oops");
+            expect(res.unwrapErr()).toEqual("oops");
         });
     });
 
     describe("::flatten", () => {
         it("Converts from AsyncResult<AsyncResult<A, E> F> to AsyncResult<A, E | F>", async () => {
             const x = await AsyncOk(AsyncOk("hello")).to(AsyncResult.flatten);
-            expect(x.val).toEqual("hello");
+            expect(x.unwrap()).toEqual("hello");
 
             const y = await AsyncOk(AsyncErr(6)).to(AsyncResult.flatten);
-            expect(y.err).toEqual(6);
+            expect(y.unwrapErr()).toEqual(6);
         });
     });
 
@@ -562,7 +562,7 @@ describe("AsyncResult", () => {
                 return a + b + c + d;
             });
 
-            expect(foo.val).toEqual(12);
+            expect(foo.unwrap()).toEqual(12);
 
             const bar = await asyncResult(function* () {
                 const d: number = yield* Ok(2);
@@ -572,7 +572,7 @@ describe("AsyncResult", () => {
                 return b + c + d;
             });
 
-            expect(bar.val).toEqual(7);
+            expect(bar.unwrap()).toEqual(7);
 
             const baz = await asyncResult(function* () {
                 const c: number = yield* AsyncOk(2);
@@ -581,7 +581,7 @@ describe("AsyncResult", () => {
                 return b + c;
             });
 
-            expect(baz.val).toEqual(5);
+            expect(baz.unwrap()).toEqual(5);
 
             const bag = await asyncResult(function* () {
                 const b: number = yield* Async(Ok(3));
@@ -589,7 +589,7 @@ describe("AsyncResult", () => {
                 return b;
             });
 
-            expect(bag.val).toEqual(3);
+            expect(bag.unwrap()).toEqual(3);
         });
 
         it("Sad path works correctly", async () => {
@@ -597,23 +597,23 @@ describe("AsyncResult", () => {
                 Async(Err("oops"));
 
             const foo = await asyncResult(function* () {
-                const a = yield* Ok(1);
+                const a = yield* Ok<number, string>(1);
                 const b = yield* oops();
 
                 return a + b;
             });
 
-            expect(foo.err).toEqual("oops");
+            expect(foo.unwrapErr()).toEqual("oops");
 
             const bar = await asyncResult(function* () {
-                const a: number = yield* Ok(5);
+                const a: number = yield* Ok<number, string>(5);
                 const b: number = yield* AsyncErr("oh no");
                 const c: number = yield* Async(2);
 
                 return a + b + c;
             });
 
-            expect(bar.err).toEqual("oh no");
+            expect(bar.unwrapErr()).toEqual("oh no");
 
             const baz = await asyncResult(function* () {
                 const a: number = yield* AsyncOk(5);
@@ -623,7 +623,7 @@ describe("AsyncResult", () => {
                 return a + b + c;
             });
 
-            expect(baz.err).toEqual("aaa");
+            expect(baz.unwrapErr()).toEqual("aaa");
         });
     });
 });

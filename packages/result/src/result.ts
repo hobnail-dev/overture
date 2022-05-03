@@ -1,162 +1,23 @@
 import { AsyncResult } from "./asyncResult";
 import { Exn } from "./exn";
+import { ErrType } from "./typeUtils";
 
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
- * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
+ * It can either be `Ok<A>`, representing success, or an `Err<E>`, representing an error.
  */
-export class Result<A, E> {
-    private constructor(
-        private readonly _isOk: boolean,
-        /**
-         * this: Result<A, E>
-         *
-         * val: A | undefined
-         *
-         * ---
-         * The raw `Ok` value inside the `Result<A, E>`.
-         * @example
-         * const x = Ok(3);
-         * expect(x.val).toEqual(3);
-         *
-         * const y = Err("oops");
-         * expect(y.val).toBeUndefined();
-         */
-        readonly val?: A,
-        /**
-         * this: Result<A, E>
-         *
-         * err: E | undefined
-         *
-         * ---
-         * The raw `Err` value, inside the `Result<A, E>`.
-         * @example
-         * const x = Err(3);
-         * expect(x.err).toEqual(3);
-         *
-         * const y = Ok("hello");
-         * expect(y.err).toBeUndefined();
-         */
-        readonly err?: E,
-        /**
-         * this: Result<A, E>
-         *
-         * stack: string | undefined
-         *
-         * ---
-         * `Err` stack trace. Is only present if the `Result` is `Err` and has had the stack trace added to it with `.trace()`.
-         * @example
-         * const a = Ok(3);
-         * expect(a.stack).toBeUndefined();
-         *
-         * const b = Err("oops");
-         * exepct(b.stack).toBeUndefined();
-         *
-         * const c = Err("oh no").trace();
-         * expect(c.stack).toBeDefined();
-         */
-        readonly stack?: string
-    ) {}
+export type Result<A, E> = Ok<A, E> | Err<E, A>;
+export type Ok<A, E = never> = OkImpl<A, E>;
+export type Err<E, A = never> = ErrImpl<A, E>;
 
-    /**
-     * `ok: A -> Result<A, E>`
-     *
-     * ---
-     * @returns a `Result<A, E>` that represents a success.
-     * @example
-     * const x = Result.ok(3);
-     *
-     * expect(x).toBeInstanceOf(Result);
-     * expect(x.isOk()).toBe(true)
-     */
-    static ok<A = void, E = never>(value?: A): Result<A, E> {
-        if (arguments.length === 0)
-            return new Result(true, (() => {})()) as any;
+export abstract class ResultImpl<A = never, E = never> {
+    abstract [Symbol.iterator](): Generator<ResultImpl<A, E>, A, any>;
+    abstract readonly val?: A;
 
-        return new Result(true, value);
-    }
+    readonly err?: E = undefined;
 
-    /**
-     * `err: E -> Result<A, E>`
-     *
-     * ---
-     * @returns a `Result<A, E>` that represents an error.
-     * @example
-     * const x = Result.err("oops");
-     *
-     * expect(x).toBeInstanceOf(Result);
-     * expect(x.isErr()).toBe(true)
-     */
-    static err<A = never, E = never>(error: E): Result<A, E>;
-    static err<A = never, E = never>(error: E, stack?: string): Result<A, E>;
-    static err<A = never, E = never>(error: E, stack?: string): Result<A, E> {
-        return new Result(false, undefined, error, stack) as any;
-    }
-
-    /**
-     * `try: (T extends string, () -> A) -> Result<A, Exn<T>>`
-     *
-     * ---
-     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
-     *
-     * @example
-     * const a: Result<number, Exn<"MyExnTypeName">> =
-     * Result.try("MyExnTypeName", () => {
-     *   if (true) throw new Error("oh no")
-     *   else return 1;
-     * });
-     * expect(a.unwrapErr().type).toEqual("MyExnTypeName");
-     * expect(a.unwrapErr().message).toEqual("oh no");
-     *
-     * const b = Result.try("Panic!", () => { throw "oops" });
-     * expect(b.unwrapErr().type).toEqual("Panic!");
-     * expect(b.unwrapErr().message).toEqual("oops");
-     */
-    static try<A, T extends string>(
-        exnType: T,
-        fn: () => A
-    ): Result<A, Exn<T>> {
-        try {
-            return Result.ok(fn());
-        } catch (e) {
-            const stringify = (e: unknown) =>
-                typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
-
-            const [message, stack] =
-                e instanceof Error
-                    ? [e.message, e.stack]
-                    : [stringify(e), new Error().stack];
-
-            return new Result(
-                false,
-                undefined,
-                { type: exnType, message },
-                stack
-            ) as any;
-        }
-    }
-
-    *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
-        return yield this;
-    }
-
-    /**
-     * `this: Result<A, E>`
-     *
-     * `isOk: () -> boolean`
-     *
-     * ---
-     * @returns `true` if the `Result<A, E>` is Ok.
-     * @example
-     * const val = Ok(5);
-     * expect(val.isOk()).toBe(true);
-     */
-    isOk(): boolean {
-        return this._isOk;
-    }
-
+    abstract isOk(): this is Ok<A, E>;
+    abstract isErr(): this is Err<E, A>;
     /**
      * `this: Result<A, E>`
      *
@@ -168,28 +29,7 @@ export class Result<A, E> {
      * const val = Ok(4);
      * expect(val.isOkWith(x => x % 2 === 0)).toBe(true);
      */
-    isOkWith(predicate: (a: A) => boolean): boolean {
-        if (this.isOk()) {
-            return predicate(this.val!);
-        }
-
-        return false;
-    }
-
-    /**
-     * `this: Result<A, E>`
-     *
-     * `isErr: () -> boolean`
-     *
-     * ---
-     * @returns `true` if the `Result<A, E>` contains an Err.
-     * @example
-     * const val = Err("oh no!");
-     * expect(val.isErr()).toBe(true);
-     */
-    isErr(): boolean {
-        return !this._isOk;
-    }
+    abstract isOkWith(predicate: (a: A) => boolean): boolean;
 
     /**
      * `this: Result<A, E>`
@@ -202,13 +42,7 @@ export class Result<A, E> {
      * const val = Err("oh no!");
      * expect(val.isErrWith(x => x.length > 0)).toBe(true);
      */
-    isErrWith(predicate: (e: E) => boolean): boolean {
-        if (this.isErr()) {
-            return predicate(this.err!);
-        }
-
-        return false;
-    }
+    abstract isErrWith(predicate: (e: E) => boolean): boolean;
 
     /**
      * `this: Result<A, E>`
@@ -225,16 +59,7 @@ export class Result<A, E> {
      * const y = Err("oops");
      * expect(() => y.unwrap()).toThrow(new Error("oops"));
      */
-    unwrap(): A {
-        if (this.isOk()) return this.val!;
-
-        const msg =
-            typeof this.err === "string"
-                ? this.err
-                : JSON.stringify(this.err, undefined, 2);
-
-        throw new Error(msg);
-    }
+    abstract unwrap(): A;
 
     /**
      * `this: Result<A, E>`
@@ -250,11 +75,7 @@ export class Result<A, E> {
      * const y = Err("oops").or(2);
      * expect(y).toEqual(2);
      */
-    unwrapOr(a: A): A {
-        if (this.isOk()) return this.val!;
-
-        return a;
-    }
+    abstract unwrapOr(a: A): A;
 
     /**
      * `this: Result<A, E>`
@@ -272,11 +93,7 @@ export class Result<A, E> {
      * const b = Err("foo").unwrapOrElse(count);
      * expect(b).toEqual(3);
      */
-    unwrapOrElse(fn: (e: E) => A): A {
-        if (this.isOk()) return this.val!;
-
-        return fn(this.err!);
-    }
+    abstract unwrapOrElse(fn: (e: E) => A): A;
 
     /**
      * `this: Result<A, E>`
@@ -293,13 +110,7 @@ export class Result<A, E> {
      * const y = Ok(5);
      * expect (() => y.unwrapErr()).toThrow();
      */
-    unwrapErr(): E {
-        if (this.isOk()) {
-            throw new Error(`Could not extract error from Result: ${this.val}`);
-        }
-
-        return this.err!;
-    }
+    abstract unwrapErr(): E;
 
     /**
      * `this: Result<A, E>`
@@ -313,16 +124,7 @@ export class Result<A, E> {
      * const x = Err("oh no!");
      * x.expect("Testing expect"); // throws Error with message 'Testing expect: oh no!'
      */
-    expect(msg: string): A {
-        if (this.isOk()) return this.val!;
-
-        const errMsg =
-            typeof this.err === "string"
-                ? this.err
-                : JSON.stringify(this.err, undefined, 2);
-
-        throw new Error(`${msg}: ${errMsg}`);
-    }
+    abstract expect(msg: string): A;
 
     /**
      * `this: Result<A, E>`
@@ -336,13 +138,7 @@ export class Result<A, E> {
      * const x = Ok(10);
      * x.expectErr("Testing expectErr"); // throws Error with message 'Testing expectErr: 10'
      */
-    expectErr(msg: string): E {
-        if (this.isOk()) {
-            throw new Error(`${msg}: ${this.val}`);
-        }
-
-        return this.err!;
-    }
+    abstract expectErr(msg: string): E;
 
     /**
      * `this: Result<A, E>`
@@ -361,18 +157,7 @@ export class Result<A, E> {
      * const c = Err("oh no").trace();
      * expect(c.stack).toBeDefined();
      */
-    trace(): Result<A, E> {
-        if (this.isErr()) {
-            return new Result(
-                this._isOk,
-                this.val,
-                this.err,
-                new Error().stack?.replace("Error", "Err")
-            );
-        }
-
-        return this;
-    }
+    abstract trace(): Result<A, E>;
 
     /**
      * `this: Result<A, E>`
@@ -390,13 +175,7 @@ export class Result<A, E> {
      * expect(() => y.unwrap()).toThrow();
      * expect(y.unwrapErr()).toEqual("oops");
      */
-    map<B>(fn: (a: A) => B): Result<B, E> {
-        if (this.isOk()) {
-            return Result.ok(fn(this.val!));
-        }
-
-        return this as any;
-    }
+    abstract map<B>(fn: (a: A) => B): Result<B, E>;
 
     /**
      * `this: Result<A, E>`
@@ -414,13 +193,7 @@ export class Result<A, E> {
      * expect(() => y.unwrapErr()).toThrow();
      * expect(y.unwrap()).toEqual("foo");
      */
-    mapErr<F>(fn: (a: E) => F): Result<A, F> {
-        if (this.isErr()) {
-            return Result.err(fn(this.err!));
-        }
-
-        return this as any;
-    }
+    abstract mapErr<F>(fn: (a: E) => F): Result<A, F>;
 
     /**
      * `this: Result<A, E>`
@@ -436,13 +209,7 @@ export class Result<A, E> {
      * const y = Err("bar").mapOr(42, v => v.length);
      * expect(y).toEqual(42);
      */
-    mapOr<B>(b: B, fn: (a: A) => B): B {
-        if (this.isOk()) {
-            return fn(this.val!);
-        }
-
-        return b;
-    }
+    abstract mapOr<B>(b: B, fn: (a: A) => B): B;
 
     /**
      * `this: Result<A, E>`
@@ -467,13 +234,7 @@ export class Result<A, E> {
      *
      * expect(y).toEqual(5);
      */
-    mapOrElse<B>(errFn: (b: E) => B, okFn: (a: A) => B): B {
-        if (this.isOk()) {
-            return okFn(this.val!);
-        }
-
-        return errFn(this.err!);
-    }
+    abstract mapOrElse<B>(errFn: (b: E) => B, okFn: (a: A) => B): B;
 
     /**
      * `this: Result<A, E>`
@@ -491,13 +252,7 @@ export class Result<A, E> {
      * expect(() => y.unwrap()).toThrow();
      * expect(y.unwrapErr()).toEqual("oops");
      */
-    andThen<B, F>(fn: (a: A) => Result<B, F>): Result<B, E | F> {
-        if (this.isOk()) {
-            return fn(this.val!);
-        }
-
-        return this as any;
-    }
+    abstract andThen<B, F>(fn: (a: A) => Result<B, F>): Result<B, E | F>;
 
     /**
      * `this: Result<A, E>`
@@ -512,11 +267,7 @@ export class Result<A, E> {
      *
      * expect(x).toEqual(5);
      */
-    forEach(fn: (a: A) => void): void {
-        if (this.isOk()) {
-            fn(this.val!);
-        }
-    }
+    abstract forEach(fn: (a: A) => void): void;
 
     /**
      * `this: Result<A, E>`
@@ -531,11 +282,7 @@ export class Result<A, E> {
      *
      * expect(x).toEqual(5);
      */
-    forEachErr(fn: (e: E) => void): void {
-        if (this.isErr()) {
-            fn(this.err!);
-        }
-    }
+    abstract forEachErr(fn: (e: E) => void): void;
 
     /**
      * `this: Result<A, E>`
@@ -548,9 +295,7 @@ export class Result<A, E> {
      * const a = Ok("3").to(x => Number(x.unwrap()));
      * expect(a).toEqual(3);
      */
-    to<B>(fn: (a: Result<A, E>) => B): B {
-        return fn(this);
-    }
+    abstract to<B>(fn: (a: Result<A, E>) => B): B;
 
     /**
      * `this: Result<A, E>`
@@ -566,13 +311,7 @@ export class Result<A, E> {
      * const y = Err("oops").toArray();
      * expect(y.length).toEqual(0);
      */
-    toArray(): A[] {
-        if (this.isOk()) {
-            return [this.val!];
-        }
-
-        return [];
-    }
+    abstract toArray(): A[];
 
     /**
      * `this: Result<A, E>`
@@ -588,13 +327,7 @@ export class Result<A, E> {
      * const y = Ok(4).toErrArray();
      * expect(y.length).toEqual(0);
      */
-    toErrArray(): E[] {
-        if (this.isErr()) {
-            return [this.err!];
-        }
-
-        return [];
-    }
+    abstract toErrArray(): E[];
 
     /**
      * `this: Result<A, E>`
@@ -607,9 +340,7 @@ export class Result<A, E> {
      * const a = Ok(5).toAsyncResult();
      * expect(a).toBeInstanceOf(AsyncResult);
      */
-    toAsyncResult(): AsyncResult<A, E> {
-        return AsyncResult.fromResult(this);
-    }
+    abstract toAsyncResult(): AsyncResult<A, E>;
 
     /**
      * `this: Result<A, E>`
@@ -628,17 +359,7 @@ export class Result<A, E> {
      * const z = Ok(1).and(Err("fatal"));
      * expect(z.unwrapErr()).toEqual("fatal");
      */
-    and<B, F>(r: Result<B, F>): Result<[A, B], E | F> {
-        if (this.isOk()) {
-            if (r.isOk()) {
-                return Result.ok([this.val!, r.val!]);
-            }
-
-            return r as any;
-        }
-
-        return this as any;
-    }
+    abstract and<B, F>(r: Result<B, F>): Result<[A, B], E | F>;
 
     /**
      * `this: Result<A, E>`
@@ -664,13 +385,7 @@ export class Result<A, E> {
      * const y = Ok(100);
      * expect(x.or(y).unwrap()).toEqual(2);
      */
-    or<F>(r: Result<A, F>): Result<A, E | F> {
-        if (this.isOk()) {
-            return this;
-        }
-
-        return r;
-    }
+    abstract or<F>(r: Result<A, F>): Result<A, E | F>;
 
     /**
      * `this: Result<A, E>`
@@ -696,13 +411,7 @@ export class Result<A, E> {
      * const y = (x: number) => Ok(x * 100);
      * expect(x.or(y).unwrap()).toEqual(3);
      */
-    orElse<F>(fn: (e: E) => Result<A, F>): Result<A, E | F> {
-        if (this.isOk()) {
-            return this;
-        }
-
-        return fn(this.err!);
-    }
+    abstract orElse<F>(fn: (e: E) => Result<A, F>): Result<A, E | F>;
 
     /**
      * `this: Result<A, E>`
@@ -718,9 +427,7 @@ export class Result<A, E> {
      * const x = Err("oh no");
      * expect(x.contains(2)).toBe(false);
      */
-    contains(a: A): boolean {
-        return this.val === a;
-    }
+    abstract contains(a: A): boolean;
 
     /**
      * `this: Result<A, E>`
@@ -736,9 +443,7 @@ export class Result<A, E> {
      * const x = Ok(2);
      * expect(x.containsErr("oops")).toBe(false);
      */
-    containsErr(e: E): boolean {
-        return this.err === e;
-    }
+    abstract containsErr(e: E): boolean;
 
     /**
      * `this: Result<A, E>`
@@ -757,13 +462,7 @@ export class Result<A, E> {
      * expect(y).toBeInstanceOf(Result);
      * expect(y.err).toEqual("oops");
      */
-    inspect(fn: (a: A) => void): Result<A, E> {
-        if (this.isOk()) {
-            fn(this.val!);
-        }
-
-        return this;
-    }
+    abstract inspect(fn: (a: A) => void): Result<A, E>;
 
     /**
      * `this: Result<A, E>`
@@ -782,13 +481,7 @@ export class Result<A, E> {
      * expect(y).toBeInstanceOf(Result);
      * expect(y.err).toEqual("oops");
      */
-    inspectErr(fn: (e: E) => void): Result<A, E> {
-        if (this.isErr()) {
-            fn(this.err!);
-        }
-
-        return this;
-    }
+    abstract inspectErr(fn: (e: E) => void): Result<A, E>;
 
     /**
      * `this: Result<A, E>`
@@ -805,13 +498,7 @@ export class Result<A, E> {
      *
      * expect(res).toBeInstanceOf(AsyncResult);
      */
-    collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
-        if (this.isErr()) {
-            return AsyncResult.fromResult(this) as any;
-        }
-
-        return AsyncResult.from(fn(this.val!).then(Result.ok));
-    }
+    abstract collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E>;
 
     /**
      * `this: Result<A, E>`
@@ -828,63 +515,436 @@ export class Result<A, E> {
      * const y: Result<number | null, string> = x.map(evenOrNull);
      * const z: Result<number, string> | null | undefined = x.collectNullable(evenOrNull);
      */
-    collectNullable<B>(
+    abstract collectNullable<B>(
         fn: (a: A) => B | null | undefined
-    ): Result<B, E> | null | undefined {
-        if (this.isErr()) {
-            return this as any;
-        }
+    ): Result<B, E> | null | undefined;
+}
 
-        const x = fn(this.val!);
-        if (x == null) return x as any;
+class OkImpl<A, E = never> implements ResultImpl<A, E> {
+    private constructor(
+        /**
+         * this: Result<A, E>
+         *
+         * val: A | undefined
+         *
+         * ---
+         * The raw `Ok` value inside the `Result<A, E>`.
+         * @example
+         * const x = Ok(3);
+         * expect(x.val).toEqual(3);
+         *
+         * const y = Err("oops");
+         * expect(y.val).toBeUndefined();
+         */
+        readonly val: A
+    ) {}
 
-        return Result.ok(x);
+    *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
+        return yield this as any;
     }
 
     /**
-     * `transposePromise: Result<Promise<A>, E> -> AsyncResult<A, E>`
+     * `ok: A -> Result<A, E>`
      *
      * ---
-     * Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
+     * @returns a `Result<A, E>` that represents a success.
      * @example
-     * declare getPokemon(id: number): Promise<Pokemon>;
-     * declare parseId(str: string): Result<number, string>;
+     * const x = Result.ok(3);
      *
-     * const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
-     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+     * expect(x).toBeInstanceOf(Result);
+     * expect(x.isOk()).toBe(true)
      */
-    static transposePromise = <A, E>(
-        rp: Result<Promise<A>, E>
-    ): AsyncResult<A, E> => rp.collectPromise(x => x);
+    static ok<A = void, E = never>(value?: A): Result<A, E> {
+        if (arguments.length === 0) return new OkImpl((() => {})()) as any;
+
+        return new OkImpl(value!);
+    }
 
     /**
-     * `transposeNullable: Result<A | null | undefined, E> -> Result<A, E> | null | undefined`
+     * `this: Result<A, E>`
+     *
+     * `isOk: () -> boolean`
      *
      * ---
-     * Tranposes a `Result<A | null | undefined, E>` into a `Result<A, E> | null | undefined`.
+     * @returns `true` if the `Result<A, E>` is Ok.
      * @example
-     * const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
-     * const x: Result<number | null, string> = Ok(3).map(evenOrNull);
-     * const y: Result<number, string> | null | undefined = Result.tranposeNullable(x);
+     * const val = Ok(5);
+     * expect(val.isOk()).toBe(true);
      */
-    static transposeNullable = <A, E>(
-        ro: Result<A | null | undefined, E>
-    ): Result<A, E> | null | undefined => ro.collectNullable(x => x);
+    isOk(): this is Ok<A> {
+        return true;
+    }
 
     /**
-     * `flatten: Result<Result<A, E>, F> -> Result<A, E | F>`
+     * `this: Result<A, E>`
+     *
+     * `isErr: () -> boolean`
      *
      * ---
-     * Converts from `Result<Result<A, E>, F>` to a `Result<A, E | F>`.
+     * @returns `true` if the `Result<A, E>` contains an Err.
      * @example
-     * const x = Result.flatten(Ok(Ok(3)));
-     * expect(x.unwrap()).toEqual(3);
-     *
-     * const y = Result.flatten(Ok(Err("oops")));
-     * expect(y.unwrapErr()).toEqual("oops");
+     * const val = Err("oh no!");
+     * expect(val.isErr()).toBe(true);
      */
-    static flatten = <A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> =>
-        r.andThen(x => x);
+    isErr(): false {
+        return false;
+    }
+
+    isOkWith(predicate: (a: A) => boolean): boolean {
+        return predicate(this.val!);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    isErrWith(predicate: (e: E) => boolean): boolean {
+        return false;
+    }
+
+    unwrap(): A {
+        return this.val;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    unwrapOr(a: A): A {
+        return this.val;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    unwrapOrElse(fn: (e: E) => A): A {
+        return this.val;
+    }
+
+    unwrapErr(): E {
+        throw new Error(`Could not extract error from Result: ${this.val}`);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    expect(msg: string): A {
+        return this.val;
+    }
+
+    expectErr(msg: string): E {
+        throw new Error(`${msg}: ${this.val}`);
+    }
+
+    trace(): Result<A, E> {
+        return this;
+    }
+
+    map<B>(fn: (a: A) => B): Result<B, E> {
+        return Ok(fn(this.val));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    mapErr<F>(fn: (a: E) => F): Result<A, F> {
+        return this as any;
+    }
+
+    mapOr<B>(b: B, fn: (a: A) => B): B {
+        return fn(this.val!);
+    }
+
+    mapOrElse<B>(errFn: (b: E) => B, okFn: (a: A) => B): B {
+        return okFn(this.val!);
+    }
+
+    andThen<B, F>(fn: (a: A) => Result<B, F>): Result<B, F> {
+        return fn(this.val!);
+    }
+
+    forEach(fn: (a: A) => void): void {
+        fn(this.val);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forEachErr(fn: (e: E) => void): void {}
+
+    to<B>(fn: (a: Result<A, E>) => B): B {
+        return fn(this);
+    }
+
+    toArray(): A[] {
+        return [this.val];
+    }
+
+    toErrArray(): E[] {
+        return [];
+    }
+
+    toAsyncResult(): AsyncResult<A, E> {
+        return AsyncResult.fromResult(this) as any;
+    }
+
+    and<B, F>(r: Result<B, F>): Result<[A, B], E | F> {
+        if (this.isOk()) {
+            if (r.isOk()) {
+                return Ok([this.val, r.val]);
+            }
+
+            return r as any;
+        }
+
+        return this as any;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    or<F>(r: Result<A, F>): Result<A, E | F> {
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    orElse<F>(fn: (e: E) => Result<A, F>): Result<A, E | F> {
+        return this;
+    }
+
+    contains(a: A): boolean {
+        return this.val === a;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    containsErr(e: E): boolean {
+        return false;
+    }
+
+    inspect(fn: (a: A) => void): Result<A, E> {
+        fn(this.val);
+
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    inspectErr(fn: (e: E) => void): Result<A, E> {
+        return this;
+    }
+
+    collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
+        return AsyncResult.from(fn(this.val).then(Ok));
+    }
+
+    collectNullable<B>(
+        fn: (a: A) => B | null | undefined
+    ): Result<B, E> | null | undefined {
+        const x = fn(this.val!);
+        if (x == null) return x as any;
+
+        return Ok(x);
+    }
+}
+class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
+    private constructor(
+        /**
+         * this: Result<A, E>
+         *
+         * err: E | undefined
+         *
+         * ---
+         * The raw `Err` value, inside the `Result<A, E>`.
+         * @example
+         * const x = Err(3);
+         * expect(x.err).toEqual(3);
+         *
+         * const y = Ok("hello");
+         * expect(y.err).toBeUndefined();
+         */
+        readonly err: E,
+        /**
+         * this: Result<A, E>
+         *
+         * stack: string | undefined
+         *
+         * ---
+         * `Err` stack trace. Is only present if the `Result` is `Err` and has had the stack trace added to it with `.trace()`.
+         * @example
+         * const a = Ok(3);
+         * expect(a.stack).toBeUndefined();
+         *
+         * const b = Err("oops");
+         * exepct(b.stack).toBeUndefined();
+         *
+         * const c = Err("oh no").trace();
+         * expect(c.stack).toBeDefined();
+         */
+        readonly stack?: string
+    ) {}
+
+    static err<E = never>(error: E): Result<never, E>;
+    static err<E = never>(error: E, stack?: string): Result<never, E>;
+    static err<E = never>(error: E, stack?: string): Result<never, E> {
+        return new ErrImpl(error, stack) as any;
+    }
+
+    *[Symbol.iterator](): Generator<Result<A, E>, A, any> {
+        return yield this as any;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `isOk: () -> boolean`
+     *
+     * ---
+     * @returns `true` if the `Result<A, E>` is Ok.
+     * @example
+     * const val = Ok(5);
+     * expect(val.isOk()).toBe(true);
+     */
+    isOk(): false {
+        return false;
+    }
+
+    /**
+     * `this: Result<A, E>`
+     *
+     * `isErr: () -> boolean`
+     *
+     * ---
+     * @returns `true` if the `Result<A, E>` contains an Err.
+     * @example
+     * const val = Err("oh no!");
+     * expect(val.isErr()).toBe(true);
+     */
+    isErr(): this is Err<E> {
+        return true;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    isOkWith(predicate: (a: A) => boolean): boolean {
+        return false;
+    }
+
+    isErrWith(predicate: (e: E) => boolean): boolean {
+        return predicate(this.err!);
+    }
+
+    unwrap(): A {
+        const msg =
+            typeof this.err === "string"
+                ? this.err
+                : JSON.stringify(this.err, undefined, 2);
+
+        throw new Error(msg);
+    }
+
+    unwrapOr(a: A): A {
+        return a;
+    }
+
+    unwrapOrElse(fn: (e: E) => A): A {
+        return fn(this.err!);
+    }
+
+    unwrapErr(): E {
+        return this.err;
+    }
+
+    expect(msg: string): A {
+        const errMsg =
+            typeof this.err === "string"
+                ? this.err
+                : JSON.stringify(this.err, undefined, 2);
+
+        throw new Error(`${msg}: ${errMsg}`);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    expectErr(msg: string): E {
+        return this.err;
+    }
+
+    trace(): Result<A, E> {
+        return Err(this.err, new Error().stack?.replace("Error", "Err"));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    map<B>(fn: (a: A) => B): Result<B, E> {
+        return this as any;
+    }
+
+    mapErr<F>(fn: (a: E) => F): Result<A, F> {
+        return Err(fn(this.err));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    mapOr<B>(b: B, fn: (a: A) => B): B {
+        return b;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    mapOrElse<B>(errFn: (b: E) => B, okFn: (a: A) => B): B {
+        return errFn(this.err!);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    andThen<B, F>(fn: (a: A) => Result<B, F>): Result<B, E | F> {
+        return this as any;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forEach(fn: (a: A) => void): void {}
+
+    forEachErr(fn: (e: E) => void): void {
+        fn(this.err);
+    }
+
+    to<B>(fn: (a: Result<A, E>) => B): B {
+        return fn(this);
+    }
+
+    toArray(): A[] {
+        return [];
+    }
+
+    toErrArray(): E[] {
+        return [this.err];
+    }
+
+    toAsyncResult(): AsyncResult<A, E> {
+        return AsyncResult.fromResult(this) as any;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    and<B, F>(r: Result<B, F>): Result<[A, B], E | F> {
+        return this as any;
+    }
+
+    or<F>(r: Result<A, F>): Result<A, E | F> {
+        return r;
+    }
+
+    orElse<F>(fn: (e: E) => Result<A, F>): Result<A, E | F> {
+        return fn(this.err);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    contains(a: A): boolean {
+        return false;
+    }
+
+    containsErr(e: E): boolean {
+        return this.err === e;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    inspect(fn: (a: A) => void): Result<A, E> {
+        return this;
+    }
+
+    inspectErr(fn: (e: E) => void): Result<A, E> {
+        fn(this.err);
+
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
+        return AsyncResult.fromResult(this) as any;
+    }
+
+    collectNullable<B>(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        fn: (a: A) => B | null | undefined
+    ): Result<B, E> | null | undefined {
+        return this as any;
+    }
 }
 
 /**
@@ -898,7 +958,7 @@ export class Result<A, E> {
  * expect(x).toBeInstanceOf(Result);
  * expect(x.isOk()).toBe(true)
  */
-export const Ok = Result.ok;
+export const Ok = OkImpl.ok;
 
 /**
  * `Err: E -> Result<A, E>`
@@ -911,7 +971,7 @@ export const Ok = Result.ok;
  * expect(x).toBeInstanceOf(Result);
  * expect(x.isErr()).toBe(true)
  */
-export const Err = Result.err;
+export const Err = ErrImpl.err;
 
 /**
  * `result: Error Propagation`
@@ -950,20 +1010,111 @@ export const Err = Result.err;
  */
 export const result = <A, E, B, R extends Result<A, E>>(
     genFn: () => Generator<R, B, A>
-): Result<B, NonNullable<R["err"]>> => {
+): Result<B, NonNullable<ErrType<R, A, E>>> => {
     const iterator = genFn();
     let state = iterator.next();
 
     function run(
         state: IteratorYieldResult<R> | IteratorReturnResult<B>
-    ): Result<B, R["err"]> {
+    ): Result<B, ErrType<R, A, E>> {
         if (state.done) {
             return Ok(state.value);
         }
 
         const { value } = state;
-        return value.andThen(val => run(iterator.next(val)));
+        return value.andThen(val => run(iterator.next(val))) as any;
     }
 
     return run(state) as any;
+};
+
+export const Result = {
+    /**
+     * `try: (T extends string, () -> A) -> Result<A, Exn<T>>`
+     *
+     * ---
+     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
+     *
+     * @example
+     * const a: Result<number, Exn<"MyExnTypeName">> =
+     * Result.try("MyExnTypeName", () => {
+     *   if (true) throw new Error("oh no")
+     *   else return 1;
+     * });
+     * expect(a.unwrapErr().type).toEqual("MyExnTypeName");
+     * expect(a.unwrapErr().message).toEqual("oh no");
+     *
+     * const b = Result.try("Panic!", () => { throw "oops" });
+     * expect(b.unwrapErr().type).toEqual("Panic!");
+     * expect(b.unwrapErr().message).toEqual("oops");
+     */
+    try<A, T extends string>(exnType: T, fn: () => A): Result<A, Exn<T>> {
+        try {
+            return Ok(fn());
+        } catch (e) {
+            const stringify = (e: unknown) =>
+                typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
+
+            const [message, stack] =
+                e instanceof Error
+                    ? [e.message, e.stack]
+                    : [stringify(e), new Error().stack];
+
+            return Err({ type: exnType, message }, stack) as any;
+        }
+    },
+
+    instanceof<A = never, E = never>(r: unknown): r is Result<A, E> {
+        return r instanceof OkImpl || r instanceof ErrImpl;
+    },
+
+    /**
+     * `transposePromise: Result<Promise<A>, E> -> AsyncResult<A, E>`
+     *
+     * ---
+     * Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
+     * @example
+     * declare getPokemon(id: number): Promise<Pokemon>;
+     * declare parseId(str: string): Result<number, string>;
+     *
+     * const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
+     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+     */
+    transposePromise<A, E>(rp: Result<Promise<A>, E>): AsyncResult<A, E> {
+        return rp.collectPromise(x => x);
+    },
+
+    /**
+     * `transposeNullable: Result<A | null | undefined, E> -> Result<A, E> | null | undefined`
+     *
+     * ---
+     * Tranposes a `Result<A | null | undefined, E>` into a `Result<A, E> | null | undefined`.
+     * @example
+     * const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
+     * const x: Result<number | null, string> = Ok(3).map(evenOrNull);
+     * const y: Result<number, string> | null | undefined = Result.tranposeNullable(x);
+     */
+    transposeNullable<A, E>(
+        ro: Result<A | null | undefined, E>
+    ): Result<A, E> | null | undefined {
+        return ro.collectNullable(x => x);
+    },
+
+    /**
+     * `flatten: Result<Result<A, E>, F> -> Result<A, E | F>`
+     *
+     * ---
+     * Converts from `Result<Result<A, E>, F>` to a `Result<A, E | F>`.
+     * @example
+     * const x = Result.flatten(Ok(Ok(3)));
+     * expect(x.unwrap()).toEqual(3);
+     *
+     * const y = Result.flatten(Ok(Err("oops")));
+     * expect(y.unwrapErr()).toEqual("oops");
+     */
+    flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
+        return r.andThen(x => x);
+    },
 };
