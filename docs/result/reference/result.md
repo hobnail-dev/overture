@@ -20,7 +20,6 @@ Returns a `Result<A, E>` that represents a success.
 ```ts
 const x = Ok(3);
 
-expect(x).toBeInstanceOf(Result);
 expect(x.isOk()).toBe(true)
 
 ```
@@ -34,7 +33,6 @@ Returns a `Result<A, E>` that represents an error.
 ```ts
 const x = Err("oops");
 
-expect(x).toBeInstanceOf(Result);
 expect(x.isErr()).toBe(true)
 
 ```
@@ -74,34 +72,6 @@ const y = (() => {
 
   return user.unwrap().name;
 })();
-
-```
-## ::ok 
-
-<span class="sig">`A -> Result<A, E>`</span>
-
-Returns a `Result<A, E>` that represents a success.
-##### example
-
-```ts
-const x = Result.ok(3);
-
-expect(x).toBeInstanceOf(Result);
-expect(x.isOk()).toBe(true)
-
-```
-## ::err 
-
-<span class="sig">`E -> Result<A, E>`</span>
-
-Returns a `Result<A, E>` that represents an error.
-##### example
-
-```ts
-const x = Result.err("oops");
-
-expect(x).toBeInstanceOf(Result);
-expect(x.isErr()).toBe(true)
 
 ```
 ## ::try 
@@ -170,66 +140,6 @@ const y = Result.flatten(Ok(Err("oops")));
 expect(y.unwrapErr()).toEqual("oops");
 
 ```
-## .val 
-
-<span class="sig">`A | undefined`</span>
-
-The raw `Ok` value inside the `Result<A, E>`.
-##### example
-
-```ts
-const x = Ok(3);
-expect(x.val).toEqual(3);
-
-const y = Err("oops");
-expect(y.val).toBeUndefined();
-
-```
-## .err 
-
-<span class="sig">`E | undefined`</span>
-
-The raw `Err` value, inside the `Result<A, E>`.
-##### example
-
-```ts
-const x = Err(3);
-expect(x.err).toEqual(3);
-
-const y = Ok("hello");
-expect(y.err).toBeUndefined();
-
-```
-## .stack 
-
-<span class="sig">`string | undefined`</span>
-
-`Err` stack trace. Is only present if the `Result` is `Err` and has had the stack trace added to it with `.trace()`.
-##### example
-
-```ts
-const a = Ok(3);
-expect(a.stack).toBeUndefined();
-
-const b = Err("oops");
-exepct(b.stack).toBeUndefined();
-
-const c = Err("oh no").trace();
-expect(c.stack).toBeDefined();
-
-```
-## .isOk 
-
-<span class="sig">`() -> boolean`</span>
-
-Returns `true` if the `Result<A, E>` is Ok.
-##### example
-
-```ts
-const val = Ok(5);
-expect(val.isOk()).toBe(true);
-
-```
 ## .isOkWith 
 
 <span class="sig">`A -> boolean`</span>
@@ -240,18 +150,6 @@ Returns `true` if the `Result<A, E>` is `Ok` and contains a value matching the p
 ```ts
 const val = Ok(4);
 expect(val.isOkWith(x => x % 2 === 0)).toBe(true);
-
-```
-## .isErr 
-
-<span class="sig">`() -> boolean`</span>
-
-Returns `true` if the `Result<A, E>` contains an Err.
-##### example
-
-```ts
-const val = Err("oh no!");
-expect(val.isErr()).toBe(true);
 
 ```
 ## .isErrWith 
@@ -559,7 +457,6 @@ Converts a `Result` into a `AsyncResult`.
 
 ```ts
 const a = Ok(5).toAsyncResult();
-expect(a).toBeInstanceOf(AsyncResult);
 
 ```
 ## .and 
@@ -671,12 +568,10 @@ Returns the original unmodified `Result`.
 
 ```ts
 const x: Result<number, string> = Ok(5).inspect(console.log); // prints 5
-expect(x).toBeInstanceOf(Result);
-expect(x.val).toEqual(5);
+expect(x.unwrap()).toEqual(5);
 
 const y: Result<number, string> = Err("oops").inspect(console.log); // doesn't print
-expect(y).toBeInstanceOf(Result);
-expect(y.err).toEqual("oops");
+expect(y.unwrapErr()).toEqual("oops");
 
 ```
 ## .inspectErr 
@@ -690,12 +585,10 @@ Returns the original unmodified `Result`.
 
 ```ts
 const x: Result<number, string> = Ok(5).inspectErr(console.log); // doesn't print
-expect(x).toBeInstanceOf(Result);
-expect(x.val).toEqual(5);
+expect(x.unwrap()).toEqual(5);
 
 const y: Result<number, string> = Err("oops").inspectErr(console.log); // prints "oops"
-expect(y).toBeInstanceOf(Result);
-expect(y.err).toEqual("oops");
+expect(y.unwrapErr()).toEqual("oops");
 
 ```
 ## .collectPromise 
@@ -711,8 +604,6 @@ Returns the inner value of the `Promise` wrapped in a `AsyncResult`.
 const res = Ok("ditto").collectPromise(pokemon =>
   fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
 );
-
-expect(res).toBeInstanceOf(AsyncResult);
 
 ```
 ## .collectNullable 
@@ -730,5 +621,101 @@ const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
 const x = Ok<number, string>(2);
 const y: Result<number | null, string> = x.map(evenOrNull);
 const z: Result<number, string> | null | undefined = x.collectNullable(evenOrNull);
+
+```
+## .val 
+
+<span class="sig">`A`</span>
+
+The `Ok` value inside the `Result<A, E>`.
+##### example
+
+```ts
+const x = Ok(3);
+
+if (x.isOk()) {
+  console.log(x.val); // only available when Result is Ok.
+}
+
+```
+## .isOk 
+
+<span class="sig">`() -> boolean`</span>
+
+Returns `true` if the `Result<A, E>` is Ok.
+##### example
+
+```ts
+const val = Ok(5);
+expect(val.isOk()).toBe(true);
+
+```
+## .isErr 
+
+<span class="sig">`() -> boolean`</span>
+
+Returns `true` if the `Result<A, E>` contains an Err.
+##### example
+
+```ts
+const val = Err("oh no!");
+expect(val.isErr()).toBe(true);
+
+```
+## .err 
+
+<span class="sig">`E | undefined`</span>
+
+The raw `Err` value, inside the `Result<A, E>`.
+##### example
+
+```ts
+const x = Err(3);
+
+if (x.isErr()) {
+  console.log(x.err); // only available when Result is Err.
+}
+
+```
+## .stack 
+
+<span class="sig">`string | undefined`</span>
+
+`Err` stack trace. Is only present if the `Result` is `Err` and has had the stack trace added to it with `.trace()`.
+##### example
+
+```ts
+const a = Ok(3);
+expect(a.stack).toBeUndefined();
+
+const b = Err("oops");
+exepct(b.stack).toBeUndefined();
+
+const c = Err("oh no").trace();
+expect(c.stack).toBeDefined();
+
+```
+## .isOk 
+
+<span class="sig">`() -> boolean`</span>
+
+Returns `true` if the `Result<A, E>` is Ok.
+##### example
+
+```ts
+const val = Ok(5);
+expect(val.isOk()).toBe(true);
+
+```
+## .isErr 
+
+<span class="sig">`() -> boolean`</span>
+
+Returns `true` if the `Result<A, E>` contains an Err.
+##### example
+
+```ts
+const val = Err("oh no!");
+expect(val.isErr()).toBe(true);
 
 ```

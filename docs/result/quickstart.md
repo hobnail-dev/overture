@@ -19,10 +19,10 @@ You can use the `Ok` function to create Results that are `Ok`, and the `Err` fun
 import { Ok, Err } from "@hobnail/result";
 
 const x = Ok(3);
-expect(x).toBeInstanceOf(Result);
+expect(x.isOk()).toBe(true);
 
 const y = Err("oops");
-expect(y).toBeInstanceOf(Result);
+expect(y.isErr()).toBe(true);
 ``` 
 
 ### Extracting the value from a Result
@@ -68,16 +68,22 @@ expect(() => b.unwrap()).toThrow(new Error("oops"));
 > **unwrap** should only be used if you want the application to crash if the `Result` is an `Err`, have no way of handling the error, or are completely absolutely 100% sure there is no way the `Result` can be an `Err`. **Should be avoided 99% of the time.**
 
 #### .val
-Returns the `Ok` value or `undefined`. Can be useful in some cases, but most of the time we want to avoid having to do manual `if` checks to check if our value is `Ok`.
+Returns the `Ok` value. Is only available by doing a manual `if` checks to check if our value is `Ok`.
 
 ```ts
 import { Ok, Err } from "@hobnail/result";
 
 const a = Ok(3);
-expect(a.val).toEqual(3);
 
-const a = Err("oops");
-expect(a.val).toBeUndefined();
+if(a.isOk()) {
+    console.log(a.val); // only accessible when checking if value is in fact Ok
+}
+
+const b = Err("oops");
+
+if(b.isErr()) {
+    console.log(b.err); // only accessible when checkinf if value is in fact Err
+}
 ```
 
 ### Using Result in functions

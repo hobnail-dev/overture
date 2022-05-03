@@ -20,10 +20,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * Creates a `AsyncResult<A, E>` from a `Promise<Result<A, E>>`
      * @example
      * const x = Promise.resolve(Ok(3));
-     * expect(x).toBeInstanceOf(Promise);
-     *
      * const y = AsyncResult.from(x);
-     * expect(y).toBeInstanceOf(AsyncResult);
      */
     static from<A, E>(promiseResult: Promise<Result<A, E>>): AsyncResult<A, E> {
         return new AsyncResult(promiseResult);
@@ -36,10 +33,8 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * Creates a `AsyncResult<A, E>` from a `Promise<A>`
      * @example
      * const x = Promise.resolve(3);
-     * expect(x).toBeInstanceOf(Promise);
      *
      * const y = AsyncResult.fromPromise(x);
-     * expect(y).toBeInstanceOf(AsyncResult);
      * expect(await y.isOk()).toBe(true);
      * expecy(await y.unwrap()).toEqual(3);
      */
@@ -54,10 +49,8 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * Creates a `AsyncResult<A, E>` from a `Result<A, E>`
      * @example
      * const x = Ok(3);
-     * expect(x).toBeInstanceOf(Promise);
      *
      * const y = AsyncResult.fromResult(x);
-     * expect(y).toBeInstanceOf(AsyncResult);
      * expecy(await y.unwrap()).toEqual(3);
      */
     static fromResult<A, E>(result: Result<A, E>): AsyncResult<A, E> {
@@ -675,11 +668,9 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * @returns the original unmodified `AsyncResult`.
      * @example
      * const x: AsyncResult<number, string> = AsyncOk(5).inspect(console.log);
-     * expect(x).toBeInstanceOf(AsyncResult);
      * expect(await x.unwrap()).toEqual(5); // prints 5
      *
      * const y: AsyncResult<number, string> = AsyncErr("oops").inspect(console.log);
-     * expect(y).toBeInstanceOf(AsyncResult);
      * expect(await y.unwrapErr()).toEqual("oops"); // doesn't print
      */
     inspect(fn: (a: A) => void): AsyncResult<A, E> {
@@ -696,11 +687,9 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * @returns the original unmodified `AsyncResult`.
      * @example
      * const x: AsyncResult<number, string> = AsyncOk(5).inspectErr(console.log);
-     * expect(x).toBeInstanceOf(Result);
      * expect(await x.unwrap()).toEqual(5); // doesn't print
      *
      * const y: AsyncResult<number, string> = AsyncErr("oops").inspectErr(console.log);
-     * expect(y).toBeInstanceOf(Result);
      * expect(await y.unwrapErr()).toEqual("oops"); // prints "oops"
      */
     inspectErr(fn: (e: E) => void): AsyncResult<A, E> {
@@ -719,8 +708,6 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const res = AsyncOk("ditto").collectPromise(pokemon =>
      *   fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
      * );
-     *
-     * expect(res).toBeInstanceOf(AsyncResult);
      */
     collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
         return AsyncResult.from(
@@ -794,7 +781,6 @@ export type Async<A> = Promise<A>;
  * @example
  * const x = AsyncOk(3);
  *
- * expect(x).toBeInstanceOf(AsyncResult);
  * expect(await x.isOk()).toBe(true
  */
 export const AsyncOk = <A = never, E = never>(a: A): AsyncResult<A, E> =>
@@ -809,7 +795,6 @@ export type AsyncOk<A, E = never> = AsyncResult<A, E>;
  * @example
  * const x = AsyncErr("oops");
  *
- * expect(x).toBeInstanceOf(AsyncResult);
  * expect(await x.isErr()).toBe(true)
  */
 export const AsyncErr = <A = never, E = never>(e: E): AsyncResult<A, E> =>

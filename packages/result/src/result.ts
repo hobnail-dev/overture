@@ -335,7 +335,6 @@ abstract class ResultImpl<A = never, E = never> {
      * Converts a `Result` into a `AsyncResult`.
      * @example
      * const a = Ok(5).toAsyncResult();
-     * expect(a).toBeInstanceOf(AsyncResult);
      */
     abstract toAsyncResult(): AsyncResult<A, E>;
 
@@ -452,11 +451,9 @@ abstract class ResultImpl<A = never, E = never> {
      * @returns the original unmodified `Result`.
      * @example
      * const x: Result<number, string> = Ok(5).inspect(console.log); // prints 5
-     * expect(x).toBeInstanceOf(Result);
      * expect(x.unwrap()).toEqual(5);
      *
      * const y: Result<number, string> = Err("oops").inspect(console.log); // doesn't print
-     * expect(y).toBeInstanceOf(Result);
      * expect(y.unwrapErr()).toEqual("oops");
      */
     abstract inspect(fn: (a: A) => void): Result<A, E>;
@@ -471,11 +468,9 @@ abstract class ResultImpl<A = never, E = never> {
      * @returns the original unmodified `Result`.
      * @example
      * const x: Result<number, string> = Ok(5).inspectErr(console.log); // doesn't print
-     * expect(x).toBeInstanceOf(Result);
      * expect(x.unwrap()).toEqual(5);
      *
      * const y: Result<number, string> = Err("oops").inspectErr(console.log); // prints "oops"
-     * expect(y).toBeInstanceOf(Result);
      * expect(y.unwrapErr()).toEqual("oops");
      */
     abstract inspectErr(fn: (e: E) => void): Result<A, E>;
@@ -492,8 +487,6 @@ abstract class ResultImpl<A = never, E = never> {
      * const res = Ok("ditto").collectPromise(pokemon =>
      *   fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
      * );
-     *
-     * expect(res).toBeInstanceOf(AsyncResult);
      */
     abstract collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E>;
 
@@ -540,17 +533,6 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
         return yield YieldR.create("Result", this);
     }
 
-    /**
-     * `ok: A -> Result<A, E>`
-     *
-     * ---
-     * @returns a `Result<A, E>` that represents a success.
-     * @example
-     * const x = Result.ok(3);
-     *
-     * expect(x).toBeInstanceOf(Result);
-     * expect(x.isOk()).toBe(true)
-     */
     static ok<A = void, E = never>(value?: A): Result<A, E> {
         if (arguments.length === 0) return new OkImpl((() => {})()) as any;
 
@@ -952,7 +934,6 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
  * @example
  * const x = Ok(3);
  *
- * expect(x).toBeInstanceOf(Result);
  * expect(x.isOk()).toBe(true)
  */
 export const Ok = OkImpl.ok;
@@ -965,7 +946,6 @@ export const Ok = OkImpl.ok;
  * @example
  * const x = Err("oops");
  *
- * expect(x).toBeInstanceOf(Result);
  * expect(x.isErr()).toBe(true)
  */
 export const Err = ErrImpl.err;
