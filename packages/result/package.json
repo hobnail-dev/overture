@@ -1,6 +1,6 @@
 {
     "name": "@hobnail/result",
-    "version": "0.1.3",
+    "version": "0.2.0",
     "description": "Better Error handling in TypeScript.",
     "license": "MIT",
     "author": {
