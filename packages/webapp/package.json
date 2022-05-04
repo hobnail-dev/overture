@@ -1,6 +1,6 @@
 {
     "name": "@hobnail/webapp",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "A express web application builder with compile-time dependency injection.",
     "license": "MIT",
     "author": {
@@ -8,6 +8,7 @@
         "email": "vfmenge@gmail.com"
     },
     "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "repository": {
         "type": "git",
         "url": "https://github.com/hobnail-dev/overture.git"
@@ -15,7 +16,6 @@
     "files": [
         "dist"
     ],
-    "types": "dist/index.d.ts",
     "devDependencies": {
         "@types/jest": "^27.4.1",
         "@types/supertest": "^2.0.12",
