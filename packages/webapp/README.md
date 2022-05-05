@@ -53,7 +53,7 @@ The package's API tries to remain similar to Express in order to reduce the over
 You can import the `Deps<T>` type to help you extract the type for the needed dependencies, making it easy to build a function to set up your dependencies.
 
 ```ts
-import { WebApp, Deps } from "hobnail/webapp";
+import { WebApp, Deps } from "@hobnail/webapp";
 
 const app = 
     WebApp.new()
