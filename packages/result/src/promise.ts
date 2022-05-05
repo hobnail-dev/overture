@@ -13,12 +13,12 @@ declare global {
     }
 }
 
-Promise.prototype[Symbol.iterator] = function* <T>(): Generator<
+Promise.prototype[Symbol.iterator] = function*<T>(): Generator<
     T extends Result<infer A, infer E>
         ? YieldR<A, E, "Promise">
         : YieldR<T, never, "Promise">,
     T extends Result<infer A, any> ? A : T,
     any
 > {
-    return yield YieldR.create("Promise", this) as any;
+    return yield this as any;
 };

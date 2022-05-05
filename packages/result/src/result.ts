@@ -530,7 +530,7 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
     ) {}
 
     *[Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any> {
-        return yield YieldR.create("Result", this);
+        return yield this as any;
     }
 
     static ok<A = void, E = never>(value?: A): Result<A, E> {
@@ -752,7 +752,7 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
     }
 
     *[Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any> {
-        return yield YieldR.create("Result", this);
+        return yield this as any;
     }
 
     /**
@@ -985,7 +985,7 @@ export const Err = ErrImpl.err;
  *   return user.unwrap().name;
  * })();
  */
-export const result = <A, E, B, R extends YieldR<A, E>>(
+export const result = <A, E, B, R extends YieldR<A, E, "Result">>(
     genFn: () => Generator<R, B, A>
 ): Result<B, R["err"]> => {
     const iterator = genFn();
@@ -999,7 +999,7 @@ export const result = <A, E, B, R extends YieldR<A, E>>(
         }
 
         const { value } = state;
-        return (value.obj as Result<A, E>).andThen(val =>
+        return ((value as any) as Result<A, E>).andThen(val =>
             run(iterator.next(val))
         ) as any;
     }
@@ -1095,5 +1095,5 @@ export const Result = {
      */
     flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
         return r.andThen(x => x);
-    },
+    }
 };

@@ -94,7 +94,9 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
             return Err({ type: exnType, message }, stack);
         };
 
-        const x: Promise<Result<A, Exn<T>>> = fn().then(Ok).catch(catcher);
+        const x: Promise<Result<A, Exn<T>>> = fn()
+            .then(Ok)
+            .catch(catcher);
 
         return AsyncResult.from(x);
     }
@@ -109,7 +111,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     *[Symbol.iterator](): Generator<YieldR<A, E, "AsyncResult">, A, any> {
-        return yield YieldR.create("AsyncResult", this);
+        return yield this as any;
     }
 
     /**
@@ -846,24 +848,20 @@ export const asyncResult = <A, E, B, R extends YieldR<A, E>>(
         const { value } = state;
 
         const normalize = (): AsyncResult<A, E> => {
-            switch (value.type) {
-                case "AsyncResult":
-                    return value.obj;
+            if (value instanceof AsyncResult) return value;
 
-                case "Promise":
-                    const prom = value.obj as Promise<A | Result<A, E>>;
-                    const promRes = prom.then(x =>
-                        Result.instanceof<A, E>(x) ? x : Ok(x)
-                    );
+            if (value instanceof Promise) {
+                const prom = value as Promise<A | Result<A, E>>;
+                const promRes = prom.then(x =>
+                    Result.instanceof<A, E>(x) ? x : Ok(x)
+                );
 
-                    return AsyncResult.from(promRes);
-
-                case "Result":
-                    return AsyncResult.fromResult(value.obj);
-
-                default:
-                    throw new Error("Unrecognized Yield object");
+                return AsyncResult.from(promRes);
             }
+
+            if (Result.instanceof(value)) return AsyncResult.fromResult(value);
+
+            throw new Error("Unrecognized yield* object");
         };
 
         return normalize().andThen(val => run(iterator.next(val)));
