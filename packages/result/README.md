@@ -7,7 +7,7 @@
 I don't want to get too much into it, as this is IMO very subjective. Some people are happy to work with exceptions. [This article by Oscar Ablinger](https://medium.com/codex/the-error-of-exceptions-3aed074c40dc) gets the point across pretty well. 
 
 ## Read the docs!
-[Read them!](http://localhost:3000/#/result/index)
+[Read them!](https://hobnail-dev.github.io/overture/#/result/index)
 
 ## Example
 ```ts

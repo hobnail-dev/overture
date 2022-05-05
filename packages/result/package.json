@@ -1,13 +1,14 @@
 {
     "name": "@hobnail/result",
-    "version": "0.2.1",
-    "description": "Better Error handling in TypeScript.",
+    "version": "0.2.2",
+    "description": "Better error handling in TypeScript.",
     "license": "MIT",
     "author": {
         "name": "Victor Ferreira Menge",
         "email": "vfmenge@gmail.com"
     },
     "main": "dist/index.js",
+    "homepage": "https://hobnail-dev.github.io/overture/#/result/index",
     "repository": {
         "type": "git",
         "url": "https://github.com/hobnail-dev/overture.git"
