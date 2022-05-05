@@ -1,6 +1,6 @@
 {
     "name": "@hobnail/webapp",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "description": "Compile-time dependency injection for Express.",
     "license": "MIT",
     "author": {
@@ -9,6 +9,7 @@
     },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "homepage": "https://hobnail-dev.github.io/overture/#/webapp/index",
     "repository": {
         "type": "git",
         "url": "https://github.com/hobnail-dev/overture.git"
