@@ -28,8 +28,8 @@ All handlers are `HttpHandler<T>`, where `T` are the dependencies needed for tha
 
 ```ts
 const eg1: HttpHandler = ({ req, res, next }) => res.send("eg1!");
-const eg2: HttpHandler = ctx => ctx.send("eg2!");
-const eg3: HttpHandler<{ cool: boolean }> = ctx => ctx.send(ctx.cool);
+const eg2: HttpHandler = ctx => ctx.res.send("eg2!");
+const eg3: HttpHandler<{ cool: boolean }> = ctx => ctx.res.send(ctx.cool);
 
 WebApp.new()
       .get("/eg1", eg1)

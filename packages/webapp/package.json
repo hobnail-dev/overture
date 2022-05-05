@@ -1,6 +1,6 @@
 {
     "name": "@hobnail/webapp",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "description": "Compile-time dependency injection for Express.",
     "license": "MIT",
     "author": {
