@@ -999,7 +999,7 @@ export const result = <A, E, B, R extends YieldR<A, E, "Result">>(
         }
 
         const { value } = state;
-        return ((value as any) as Result<A, E>).andThen(val =>
+        return (value as any as Result<A, E>).andThen(val =>
             run(iterator.next(val))
         ) as any;
     }
@@ -1095,5 +1095,5 @@ export const Result = {
      */
     flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
         return r.andThen(x => x);
-    }
+    },
 };

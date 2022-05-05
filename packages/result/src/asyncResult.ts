@@ -94,9 +94,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
             return Err({ type: exnType, message }, stack);
         };
 
-        const x: Promise<Result<A, Exn<T>>> = fn()
-            .then(Ok)
-            .catch(catcher);
+        const x: Promise<Result<A, Exn<T>>> = fn().then(Ok).catch(catcher);
 
         return AsyncResult.from(x);
     }
