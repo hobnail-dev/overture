@@ -20,7 +20,7 @@ app.build({ name: "Mr. Foo" })
    .listen(3000, () => console.log("Listening on port 3000!"));
 ```
 
-The example above illustrates a simple app which only has one dependency called `dependency` which is a string and will always return that dependency when called on the endpoint `/hello`.
+The example above illustrates a simple app which only has one dependency called `name` which is a string and will always return that dependency when called on the endpoint `/hello`.
 
 After creating the app, we can delay building and passing the dependencies with `.build` whenever it is the most convenient for us.
 
