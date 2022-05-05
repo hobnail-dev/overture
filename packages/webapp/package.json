@@ -1,7 +1,7 @@
 {
     "name": "@hobnail/webapp",
-    "version": "0.2.1",
-    "description": "A express web application builder with compile-time dependency injection.",
+    "version": "0.2.2",
+    "description": "Compile-time dependency injection for Express.",
     "license": "MIT",
     "author": {
         "name": "Victor Ferreira Menge",
@@ -27,8 +27,7 @@
     },
     "scripts": {
         "test": "jest",
-        "build": "rm -rf dist && tsc --project tsconfig.build.json",
-        "publish": "yarn build && npm publish && rm -rf dist"
+        "build": "rm -rf dist && tsc --project tsconfig.build.json"
     },
     "dependencies": {
         "@types/express": "^4.17.13",
