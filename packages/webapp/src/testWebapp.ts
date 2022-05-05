@@ -25,7 +25,7 @@ export class TestWebApp<T, K> {
         builder,
         setup,
         teardown,
-        client
+        client,
     }: TestWebAppProps<T, K>): TestWebApp<T, K> {
         return new TestWebApp(builder, setup, teardown, client);
     }

@@ -83,7 +83,7 @@ describe("Captures path params", () => {
         del: nanoid(),
         head: nanoid(),
         options: nanoid(),
-        trace: nanoid()
+        trace: nanoid(),
     };
 
     const testApp = () => {

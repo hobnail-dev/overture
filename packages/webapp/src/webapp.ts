@@ -5,7 +5,7 @@ import express, {
     RequestHandler,
     Response,
     Router,
-    RouterOptions
+    RouterOptions,
 } from "express";
 
 import { Guard, TryMerge } from "./typeUtils";
@@ -20,17 +20,16 @@ export type HttpHandler<Dependencies = {}> = (
     ctx: HandlerContext<Dependencies>
 ) => Promise<any> | any;
 
-const createHandler = <T>(
-    httpHandler: HttpHandler<T>,
-    deps: T
-): RequestHandler => (req: Request, res: Response, next: NextFunction) => {
-    httpHandler({
-        ...deps,
-        req,
-        res,
-        next
-    });
-};
+const createHandler =
+    <T>(httpHandler: HttpHandler<T>, deps: T): RequestHandler =>
+    (req: Request, res: Response, next: NextFunction) => {
+        httpHandler({
+            ...deps,
+            req,
+            res,
+            next,
+        });
+    };
 
 export class WebAppRouter<T = {}> {
     private constructor(
@@ -45,7 +44,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.get(path, createHandler(handler, k))
+            (e: Router, k: K) => e.get(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -55,7 +54,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.post(path, createHandler(handler, k))
+            (e: Router, k: K) => e.post(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -65,7 +64,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.patch(path, createHandler(handler, k))
+            (e: Router, k: K) => e.patch(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -75,7 +74,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.put(path, createHandler(handler, k))
+            (e: Router, k: K) => e.put(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -85,7 +84,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.delete(path, createHandler(handler, k))
+            (e: Router, k: K) => e.delete(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -95,7 +94,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.head(path, createHandler(handler, k))
+            (e: Router, k: K) => e.head(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -105,7 +104,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.options(path, createHandler(handler, k))
+            (e: Router, k: K) => e.options(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -115,7 +114,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.connect(path, createHandler(handler, k))
+            (e: Router, k: K) => e.connect(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -125,7 +124,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.trace(path, createHandler(handler, k))
+            (e: Router, k: K) => e.trace(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -134,7 +133,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.use(createHandler(handler, k))
+            (e: Router, k: K) => e.use(createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -145,7 +144,7 @@ export class WebAppRouter<T = {}> {
     ): Guard<J, WebAppRouter<J>> {
         return new WebAppRouter([
             ...this.middlewares,
-            (e: Router, k: K) => e.use(path, router.build(k, options))
+            (e: Router, k: K) => e.use(path, router.build(k, options)),
         ] as any) as any;
     }
 
@@ -169,7 +168,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.get(path, createHandler(handler, k))
+            (e: Express, k: K) => e.get(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -179,7 +178,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.post(path, createHandler(handler, k))
+            (e: Express, k: K) => e.post(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -189,7 +188,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.patch(path, createHandler(handler, k))
+            (e: Express, k: K) => e.patch(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -199,7 +198,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.put(path, createHandler(handler, k))
+            (e: Express, k: K) => e.put(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -209,7 +208,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.delete(path, createHandler(handler, k))
+            (e: Express, k: K) => e.delete(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -219,7 +218,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.head(path, createHandler(handler, k))
+            (e: Express, k: K) => e.head(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -229,7 +228,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.options(path, createHandler(handler, k))
+            (e: Express, k: K) => e.options(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -239,7 +238,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.connect(path, createHandler(handler, k))
+            (e: Express, k: K) => e.connect(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -249,7 +248,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.trace(path, createHandler(handler, k))
+            (e: Express, k: K) => e.trace(path, createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -258,7 +257,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.use(createHandler(handler, k))
+            (e: Express, k: K) => e.use(createHandler(handler, k)),
         ] as any) as any;
     }
 
@@ -269,7 +268,7 @@ export class WebApp<T = {}> {
     ): Guard<J, WebApp<J>> {
         return new WebApp([
             ...this.middlewares,
-            (e: Express, k: K) => e.use(path, router.build(k, options))
+            (e: Express, k: K) => e.use(path, router.build(k, options)),
         ] as any) as any;
     }
 

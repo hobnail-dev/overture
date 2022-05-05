@@ -11,7 +11,7 @@ describe("TestWebApp", () => {
             ),
             setup: () => ({ msg }),
             teardown: () => {},
-            client: supertest
+            client: supertest,
         });
 
     it("Runs server as expected", async () => {
