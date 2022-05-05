@@ -46,5 +46,5 @@ const queryUser = (queryString: string) =>
 queryUser("bla=5").unwrapErr(); // 'id' query param is missing.
 queryUser("id=something").unwrapErr(); // 'something' is not a number.
 queryUser("id=6").unwrapErr(); // User not found for id 6.
-queryUser("id=5").unwrap(); // { id: 5, name: "FakeUser" }
+queryUser("id=5").unwrap(); // { id: 5, name: "fakeUser" }
 ```
