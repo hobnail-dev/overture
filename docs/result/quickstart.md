@@ -104,32 +104,25 @@ You can either `try / catch` the function:
 ```ts
 import { Ok, Err, Result } from "@hobnail/result";
 
-type MyErr = {
-    type: "MyErr";
-    message: string;
-}
-
-const myResultReturningFn = (arg1: number): Result<number, MyErr> => {
+const myResultReturningFn = (arg1: number): Result<number, Error> => {
    try {
        const val = fnThatThrows(arg1);
        return Ok(val);
    } catch(e) {
-       const message = e instanceof Error ? e.message : `${e}`;
-       return Err({ type: "MyErr", message });
+       const error = e instanceof Error ? e : new Error(`${e}`);
+       return Err(error);
    }
 }
 ```
 
-Or you can use [`Result.try`](/result/reference/result.md#try) which uses the [`Exn<T>`](/result/reference/exn.md#exn) when dealing with simple errors for which you care only about `message` field's contents.
+Or you can use [`Result::try`](/result/reference/result.md#try). 
 
 ```ts
 import { Result } from "@hobnail/result";
 
-const myResultReturningFn = (arg1: number): Result<number, Exn<"MyErr">> => 
-    Result.try("MyErr", () => fnThatThrows(arg1));
+const myResultReturningFn = (arg1: number): Result<number, Error> => 
+    Result.try(() => fnThatThrows(arg1));
 ```
-
-`Exn<"MyErr">` and `MyErr` are structurally the same. `Exn<T>` is just a quick way to create simple objects like `MyErr`.
 
 ### Array of Results
 When a function returns an `Array` of Results, you'll have `Array<Result<A, E>>`. There are two ways of dealing with this.
@@ -186,12 +179,18 @@ const divide100 = () =>
         return divResult;
     });
 
-const handleOk = (n: number): void => console.log(`100 divided by 50 is ${val}!`);
-const handleErr = (e: InputError | ParseError | DivError): void => 
+const handleErr = (e: InputError | ParseError | DivError): void => {
     // error handling...
-    // needs to return same type as the success handling function!
+}
 
-divide100(50).mapOrElse(handleErr, handleOk);
+const num = divide100();
+
+if (num.isOk()) {
+    console.log(`100 divided by given input is ${num.val}!`);
+} else {
+    handleErr(num.err);
+}
+
 ```
 
 ### More

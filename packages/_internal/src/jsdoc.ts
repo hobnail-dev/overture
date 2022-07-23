@@ -51,7 +51,7 @@ export namespace JsDoc {
             param: [],
             throws: [],
             returns: [],
-            example: [],
+            example: []
         };
 
         const titleRegxp = /@\w+/;
@@ -61,7 +61,11 @@ export namespace JsDoc {
 
         const lines = str.map(x => x.replace(/^\s*\*/, ""));
         for (const s of lines) {
-            const key = s.match(titleRegxp)?.at(0)?.replace("@", "") ?? "";
+            const key =
+                s
+                    .match(titleRegxp)
+                    ?.at(0)
+                    ?.replace("@", "") ?? "";
             if (Object.keys(body).includes(key)) {
                 whitespaces = s.search(/\S/);
                 currKey = key as keyof Body;

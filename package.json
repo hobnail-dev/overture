@@ -28,6 +28,7 @@
         "test": "yarn turbo run test",
         "pre-commit": "yarn lint-staged",
         "result": "yarn workspace @hobnail/result",
-        "webapp": "yarn workspace @hobnail/webapp"
+        "webapp": "yarn workspace @hobnail/webapp",
+        "tools": "yarn workspace @hobnail/internal-tools"
     }
 }

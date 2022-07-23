@@ -53,7 +53,10 @@ namespace DocGen {
         const params = str.map(line => {
             const param = line.split(" ").at(0);
 
-            return `\`${param}\` ${line.split(" ").slice(1).join(" ")}`;
+            return `\`${param}\` ${line
+                .split(" ")
+                .slice(1)
+                .join(" ")}`;
         });
 
         return ["##### params", ...params];
@@ -74,7 +77,8 @@ namespace DocGen {
                 return header.name;
             case "instance":
                 return `.${header.name}`;
-            default: // "static"
+            default:
+                // "static"
                 return `::${header.name}`;
         }
     };
@@ -100,7 +104,7 @@ namespace DocGen {
             [
                 ...body.description,
                 ...returnsMd(body.returns),
-                ...throwsMd(body.throws),
+                ...throwsMd(body.throws)
             ].join("\n\n") +
             "\n" +
             exampleMd(body.example).join("\n");
@@ -121,7 +125,7 @@ namespace DocGen {
             ),
             ...unorderedDocs.filter(
                 x => FunctionType.fromHeader(x.header) === "instance"
-            ),
+            )
         ];
 
         if (orderedDocs.length === 0) {
@@ -129,7 +133,10 @@ namespace DocGen {
             return;
         }
 
-        const name = filePath.split("/").at(-1)!.replace(".ts", "");
+        const name = filePath
+            .split("/")
+            .at(-1)!
+            .replace(".ts", "");
 
         const template = path.join(out, `${name}${suffix}.md`);
 
@@ -164,10 +171,12 @@ namespace DocGen {
 
 const settings: DocGen.Settings[] = [
     {
-        in: "../../result/src",
-        out: "../../../docs/result/reference",
-        templateSuffix: "_template",
-    },
+        in: "../result/src",
+        out: "../../docs/result/reference",
+        templateSuffix: "_template"
+    }
 ];
 
+console.log(__dirname);
+console.log(process.cwd());
 settings.forEach(DocGen.gen);

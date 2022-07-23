@@ -133,6 +133,28 @@ expecy(await y.unwrap()).toEqual(3);
 ```
 ## ::try 
 
+<span class="sig">`(() -> A) -> AsyncResult<A, Error>`</span>
+
+Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
+
+Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+##### example
+
+```ts
+const a: AsyncResult<number, Error> =
+  AsyncResult.try(async () => {
+    if (true) throw new Error("oh no")
+    else return 1;
+  });
+expect((await a.unwrapErr())).toBeInstanceOf(Error);
+
+const b = AsyncResult.try(async () => { throw "oops" });
+expect((await b.unwrapErr())).toBeInstanceOf(Error);
+expect((await b.unwrapErr()).message).toEqual("oops");
+
+```
+## ::tryCatch 
+
 <span class="sig">`(T extends string, () -> A) -> AsyncResult<A, Exn<T>>`</span>
 
 Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
@@ -141,16 +163,18 @@ Note: If anything other than an `Error` is thrown, will and stringify the thrown
 ##### example
 
 ```ts
-const a: AsyncResult<number, Exn<"MyExnTypeName">> =
-AsyncResult.try("MyExnTypeName", async () => {
-  if (true) throw new Error("oh no")
-  else return 1;
-});
-expect((await a.unwrapErr()).type).toEqual("MyExnTypeName");
+const a: AsyncResult<number, Exn<"MyExnName">> =
+  AsyncResult.tryCatch("MyExnName", async () => {
+    if (true) throw new Error("oh no")
+    else return 1;
+  });
+expect((await a.unwrapErr())).toBeInstanceOf(Error);
+expect((await a.unwrapErr()).name).toEqual("MyExnName");
 expect((await a.unwrapErr()).message).toEqual("oh no");
 
-const b = AsyncResult.try("Panic!", async () => { throw "oops" });
-expect((await b.unwrapErr()).type).toEqual("Panic!");
+const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
+expect((await b.unwrapErr())).toBeInstanceOf(Error);
+expect((await b.unwrapErr()).name).toEqual("Panic!");
 expect((await b.unwrapErr()).message).toEqual("oops");
 
 ```
