@@ -3,7 +3,7 @@ import {
     AsyncErr,
     AsyncOk,
     AsyncResult,
-    asyncResult,
+    asyncResult
 } from "./asyncResult";
 import { Err, Ok, Result } from "./result";
 
@@ -37,32 +37,65 @@ describe("AsyncResult", () => {
 
     describe("::try", () => {
         it("Creates an Ok AsyncResult from an async function that might throw but didn't", async () => {
-            const x = AsyncResult.try("Didnt", async () => "didnt throw");
+            const x = AsyncResult.try(async () => "didnt throw");
             expect(x).toBeInstanceOf(AsyncResult);
 
-            const y = await x;
-            expect(y.unwrap()).toEqual("didnt throw");
+            expect(await x.unwrap()).toEqual("didnt throw");
         });
 
         it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
-            const x = AsyncResult.try("Oh no!", async () => {
+            const x = AsyncResult.try(async () => {
                 throw new Error("oh no");
             });
             expect(x).toBeInstanceOf(AsyncResult);
 
-            const y = await x;
-            expect(y.unwrapErr().type).toEqual("Oh no!");
-            expect(y.unwrapErr().message).toEqual("oh no");
+            const err = await x.unwrapErr();
+            expect(err).toBeInstanceOf(Error);
+            expect(err.message).toEqual("oh no");
         });
 
         it("Creates an Err AsyncResult with an Error from a function that throws a value other than an Error", async () => {
-            const x = await AsyncResult.try("Oops", async () => {
+            const x = AsyncResult.try(async () => {
                 // eslint-disable-next-line @typescript-eslint/no-throw-literal
                 throw "oops";
             });
 
-            expect(x.unwrapErr().type).toEqual("Oops");
-            expect(x.unwrapErr().message).toEqual("oops");
+            const err = await x.unwrapErr();
+            expect(err).toBeInstanceOf(Error);
+            expect(err.message).toEqual("oops");
+        });
+    });
+
+    describe("::tryCatch", () => {
+        it("Creates an Ok AsyncResult from an async function that might throw but didn't", async () => {
+            const x = AsyncResult.tryCatch("Didnt", async () => "didnt throw");
+            expect(x).toBeInstanceOf(AsyncResult);
+
+            expect(await x.unwrap()).toEqual("didnt throw");
+        });
+
+        it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
+            const x = AsyncResult.tryCatch("Oh no!", async () => {
+                throw new Error("oh no");
+            });
+            expect(x).toBeInstanceOf(AsyncResult);
+
+            const err = await x.unwrapErr();
+            expect(err).toBeInstanceOf(Error);
+            expect(err.name).toEqual("Oh no!");
+            expect(err.message).toEqual("oh no");
+        });
+
+        it("Creates an Err AsyncResult with an Error from a function that throws a value other than an Error", async () => {
+            const x = AsyncResult.tryCatch("Oops", async () => {
+                // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                throw "oops";
+            });
+
+            const err = await x.unwrapErr();
+            expect(err).toBeInstanceOf(Error);
+            expect(err.name).toEqual("Oops");
+            expect(err.message).toEqual("oops");
         });
     });
 
@@ -554,7 +587,7 @@ describe("AsyncResult", () => {
 
     describe("Computation expression", () => {
         it("Happy path works correctly", async () => {
-            const foo = await asyncResult(function* () {
+            const foo = await asyncResult(function*() {
                 const a: number = yield* Promise.resolve(5);
                 const b: number = yield* Promise.resolve(
                     Ok<number, boolean>(3)
@@ -567,7 +600,7 @@ describe("AsyncResult", () => {
 
             expect(foo.unwrap()).toEqual(12);
 
-            const bar = await asyncResult(function* () {
+            const bar = await asyncResult(function*() {
                 const d: number = yield* Ok(2);
                 const c: number = yield* AsyncOk(2);
                 const b: number = yield* Async(Ok(3));
@@ -577,7 +610,7 @@ describe("AsyncResult", () => {
 
             expect(bar.unwrap()).toEqual(7);
 
-            const baz = await asyncResult(function* () {
+            const baz = await asyncResult(function*() {
                 const c: number = yield* AsyncOk(2);
                 const b: number = yield* Async(Ok(3));
 
@@ -586,7 +619,7 @@ describe("AsyncResult", () => {
 
             expect(baz.unwrap()).toEqual(5);
 
-            const bag = await asyncResult(function* () {
+            const bag = await asyncResult(function*() {
                 const b: number = yield* Async(Ok(3));
 
                 return b;
@@ -599,7 +632,7 @@ describe("AsyncResult", () => {
             const oops = (): Promise<Result<number, string>> =>
                 Async(Err("oops"));
 
-            const foo = await asyncResult(function* () {
+            const foo = await asyncResult(function*() {
                 const a = yield* Ok<number, boolean>(1);
                 const b = yield* oops();
 
@@ -608,7 +641,7 @@ describe("AsyncResult", () => {
 
             expect(foo.unwrapErr()).toEqual("oops");
 
-            const bar = await asyncResult(function* () {
+            const bar = await asyncResult(function*() {
                 const a: number = yield* Ok<number, boolean>(5);
                 const b: number = yield* AsyncErr("oh no");
                 const c: number = yield* Async(2);
@@ -618,7 +651,7 @@ describe("AsyncResult", () => {
 
             expect(bar.unwrapErr()).toEqual("oh no");
 
-            const baz = await asyncResult(function* () {
+            const baz = await asyncResult(function*() {
                 const a: number = yield* AsyncOk<number, false>(5);
                 const b: number = yield* Err("aaa");
                 const c: number = yield* Ok<number, string[]>(2);

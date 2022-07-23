@@ -2,6 +2,9 @@ import { AsyncResult } from "./asyncResult";
 import { Exn } from "./exn";
 import { YieldR } from "./typeUtils";
 
+const stringify = (e: unknown) =>
+    typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
+
 /**
  * `Result<A, E>` is the type used for returning and propagating errors.
  * It can either be `Ok<A>`, representing success, or an `Err<E>`, representing an error.
@@ -999,7 +1002,7 @@ export const result = <A, E, B, R extends YieldR<A, E, "Result">>(
         }
 
         const { value } = state;
-        return (value as any as Result<A, E>).andThen(val =>
+        return ((value as any) as Result<A, E>).andThen(val =>
             run(iterator.next(val))
         ) as any;
     }
@@ -1009,7 +1012,37 @@ export const result = <A, E, B, R extends YieldR<A, E, "Result">>(
 
 export const Result = {
     /**
-     * `try: (T extends string, () -> A) -> Result<A, Exn<T>>`
+     * `try: (() -> A) -> Result<A, Error>`
+     *
+     * ---
+     * Catches a function that might throw, adding a stack trace to the returning `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+     *
+     * @example
+     * const a: Result<number, Error> =
+     *   Result.try(() => {
+     *     if (true) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     * expect(a.unwrapErr()).toBeInstanceOf(Error);
+     *
+     * const b = Result.try(() => { throw "oops" });
+     * expect(b.unwrapErr()).toBeInstanceOf(Error);
+     * expect(b.unwrapErr().message).toEqual("oops");
+     */
+    try<A>(fn: () => A): Result<A, Error> {
+        try {
+            return Ok(fn());
+        } catch (e) {
+            const error = e instanceof Error ? e : new Error(stringify(e));
+
+            return Err(error, error.stack);
+        }
+    },
+
+    /**
+     * `tryCatch: (T extends string, () -> A) -> Result<A, Exn<T>>`
      *
      * ---
      * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
@@ -1017,31 +1050,28 @@ export const Result = {
      * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
      *
      * @example
-     * const a: Result<number, Exn<"MyExnTypeName">> =
-     * Result.try("MyExnTypeName", () => {
-     *   if (true) throw new Error("oh no")
-     *   else return 1;
-     * });
-     * expect(a.unwrapErr().type).toEqual("MyExnTypeName");
+     * const a: Result<number, Exn<"MyExnName">> =
+     *   Result.tryCatch("MyExnName", () => {
+     *     if (true) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     * expect(a.unwrapErr()).toBeInstanceOf(Error);
+     * expect(a.unwrapErr().name).toEqual("MyExnName");
      * expect(a.unwrapErr().message).toEqual("oh no");
      *
-     * const b = Result.try("Panic!", () => { throw "oops" });
-     * expect(b.unwrapErr().type).toEqual("Panic!");
+     * const b = Result.tryCatch("Panic!", () => { throw "oops" });
+     * expect(b.unwrapErr()).toBeInstanceOf(Error);
+     * expect(b.unwrapErr().name).toEqual("Panic!");
      * expect(b.unwrapErr().message).toEqual("oops");
      */
-    try<A, T extends string>(exnType: T, fn: () => A): Result<A, Exn<T>> {
+    tryCatch<A, T extends string>(exnName: T, fn: () => A): Result<A, Exn<T>> {
         try {
             return Ok(fn());
         } catch (e) {
-            const stringify = (e: unknown) =>
-                typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
+            const error = e instanceof Error ? e : new Error(stringify(e));
+            error.name = exnName;
 
-            const [message, stack] =
-                e instanceof Error
-                    ? [e.message, e.stack]
-                    : [stringify(e), new Error().stack];
-
-            return Err({ type: exnType, message }, stack) as any;
+            return Err(error, error.stack) as any;
         }
     },
 
@@ -1095,5 +1125,5 @@ export const Result = {
      */
     flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
         return r.andThen(x => x);
-    },
+    }
 };

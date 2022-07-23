@@ -4,6 +4,9 @@ import { Exn } from "./exn";
 import { Err, Ok, Result } from "./result";
 import { YieldR } from "./typeUtils";
 
+const stringify = (x: unknown) =>
+    typeof x === "string" ? x : JSON.stringify(x, undefined, 2);
+
 /**
  * `AsyncResult<A, E>` is the type used for returning and propagating asynchronous errors.
  * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
@@ -58,7 +61,39 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `try: (T extends string, () -> A) -> AsyncResult<A, Exn<T>>`
+     * `try: (() -> A) -> AsyncResult<A, Error>`
+     *
+     * ---
+     * Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+     *
+     * @example
+     * const a: AsyncResult<number, Error> =
+     *   AsyncResult.try(async () => {
+     *     if (true) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     * expect((await a.unwrapErr())).toBeInstanceOf(Error);
+     *
+     * const b = AsyncResult.try(async () => { throw "oops" });
+     * expect((await b.unwrapErr())).toBeInstanceOf(Error);
+     * expect((await b.unwrapErr()).message).toEqual("oops");
+     */
+    static try<A>(fn: () => Promise<A>): AsyncResult<A, Error> {
+        const x: Promise<Result<A, Error>> = fn()
+            .then(Ok)
+            .catch((e: unknown) => {
+                const error = e instanceof Error ? e : new Error(stringify(e));
+
+                return Err(error, error.stack);
+            });
+
+        return AsyncResult.from(x);
+    }
+
+    /**
+     * `tryCatch: (T extends string, () -> A) -> AsyncResult<A, Exn<T>>`
      *
      * ---
      * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
@@ -66,35 +101,32 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
      *
      * @example
-     * const a: AsyncResult<number, Exn<"MyExnTypeName">> =
-     * AsyncResult.try("MyExnTypeName", async () => {
-     *   if (true) throw new Error("oh no")
-     *   else return 1;
-     * });
-     * expect((await a.unwrapErr()).type).toEqual("MyExnTypeName");
+     * const a: AsyncResult<number, Exn<"MyExnName">> =
+     *   AsyncResult.tryCatch("MyExnName", async () => {
+     *     if (true) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     * expect((await a.unwrapErr())).toBeInstanceOf(Error);
+     * expect((await a.unwrapErr()).name).toEqual("MyExnName");
      * expect((await a.unwrapErr()).message).toEqual("oh no");
      *
-     * const b = AsyncResult.try("Panic!", async () => { throw "oops" });
-     * expect((await b.unwrapErr()).type).toEqual("Panic!");
+     * const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
+     * expect((await b.unwrapErr())).toBeInstanceOf(Error);
+     * expect((await b.unwrapErr()).name).toEqual("Panic!");
      * expect((await b.unwrapErr()).message).toEqual("oops");
      */
-    static try<A, T extends string>(
-        exnType: T,
+    static tryCatch<A, T extends string>(
+        exnName: T,
         fn: () => Promise<A>
     ): AsyncResult<A, Exn<T>> {
-        const stringify = (e: unknown) =>
-            typeof e === "string" ? e : JSON.stringify(e, undefined, 2);
+        const x: Promise<Result<A, Exn<T>>> = fn()
+            .then(Ok)
+            .catch((e: unknown) => {
+                const error = e instanceof Error ? e : new Error(stringify(e));
 
-        const catcher = (e: unknown) => {
-            const [message, stack] =
-                e instanceof Error
-                    ? [e.message, e.stack]
-                    : [stringify(e), new Error().stack];
-
-            return Err({ type: exnType, message }, stack);
-        };
-
-        const x: Promise<Result<A, Exn<T>>> = fn().then(Ok).catch(catcher);
+                error.name = exnName;
+                return Err(error, error.stack) as any;
+            });
 
         return AsyncResult.from(x);
     }

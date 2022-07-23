@@ -27,28 +27,57 @@ describe("Result", () => {
 
     describe("::try", () => {
         it("Creates an Ok Result from a function that might throw but didn't", () => {
-            const x = Result.try("something", () => "didnt throw");
+            const x = Result.try(() => "didn't throw");
 
-            expect(x.unwrap()).toEqual("didnt throw");
+            expect(x.unwrap()).toEqual("didn't throw");
         });
 
         it("Creates an Err Result with an Error from a function that throws", () => {
-            const x = Result.try("OhNo", () => {
+            const x = Result.try(() => {
                 throw new Error("oh no");
             });
 
-            expect(x.unwrapErr().type).toEqual("OhNo");
             expect(x.unwrapErr().message).toEqual("oh no");
+            expect(x.unwrapErr()).toBeInstanceOf(Error);
         });
 
         it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
-            const x = Result.try("Oops", () => {
+            const x = Result.try(() => {
                 // eslint-disable-next-line @typescript-eslint/no-throw-literal
                 throw "oops";
             });
 
-            expect(x.unwrapErr().type).toEqual("Oops");
             expect(x.unwrapErr().message).toEqual("oops");
+            expect(x.unwrapErr()).toBeInstanceOf(Error);
+        });
+    });
+
+    describe("::tryCatch", () => {
+        it("Creates an Ok Result from a function that might throw but didn't", () => {
+            const x = Result.tryCatch("something", () => "didn't throw");
+
+            expect(x.unwrap()).toEqual("didn't throw");
+        });
+
+        it("Creates an Err Result with an Error from a function that throws", () => {
+            const x = Result.tryCatch("OhNo", () => {
+                throw new Error("oh no");
+            });
+
+            expect(x.unwrapErr().name).toEqual("OhNo");
+            expect(x.unwrapErr().message).toEqual("oh no");
+            expect(x.unwrapErr()).toBeInstanceOf(Error);
+        });
+
+        it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
+            const x = Result.tryCatch("Oops", () => {
+                // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                throw "oops";
+            });
+
+            expect(x.unwrapErr().name).toEqual("Oops");
+            expect(x.unwrapErr().message).toEqual("oops");
+            expect(x.unwrapErr()).toBeInstanceOf(Error);
         });
     });
 
@@ -200,7 +229,7 @@ describe("Result", () => {
 
         it("Does nothing if the Result is Ok", () => {
             const res = Ok(1).trace();
-            expect((res as any as Err<string>).stack).toBeUndefined();
+            expect(((res as any) as Err<string>).stack).toBeUndefined();
         });
     });
 
@@ -577,13 +606,19 @@ describe("Result", () => {
         const evenOrUndefined = (x: number) => (x % 2 === 0 ? x : undefined);
 
         it("Executes an Nullable returning function against the value of the Result when it is Ok, returning the Result, null or undefined", () => {
-            const a = Ok(1).map(evenOrNull).to(Result.transposeNullable);
+            const a = Ok(1)
+                .map(evenOrNull)
+                .to(Result.transposeNullable);
             expect(a).toBeNull();
 
-            const b = Ok(1).map(evenOrUndefined).to(Result.transposeNullable);
+            const b = Ok(1)
+                .map(evenOrUndefined)
+                .to(Result.transposeNullable);
             expect(b).toBeUndefined();
 
-            const c = Ok(2).map(evenOrUndefined).to(Result.transposeNullable);
+            const c = Ok(2)
+                .map(evenOrUndefined)
+                .to(Result.transposeNullable);
             expect(c!.unwrap()).toEqual(2);
         });
 
@@ -608,7 +643,7 @@ describe("Result", () => {
 
     describe("Computation Expression", () => {
         it("Happy path works correctly", () => {
-            const res = result(function* () {
+            const res = result(function*() {
                 const a = yield* Ok(5);
                 const b = yield* Ok(10);
                 const c = yield* Ok(15);
@@ -620,7 +655,7 @@ describe("Result", () => {
         });
 
         it("Failure path works correctly", () => {
-            const res = result(function* () {
+            const res = result(function*() {
                 const a = yield* Ok(5);
                 const b = yield* Err("oops");
                 const c = yield* Err("oh no!");
@@ -632,7 +667,7 @@ describe("Result", () => {
         });
 
         it("Resolves multiple error types", () => {
-            const res = result(function* () {
+            const res = result(function*() {
                 const a = yield* Ok(5);
                 const b = yield* Err({ kind: "B" as const, val: "oh no" });
                 const c = yield* Err({ kind: "C" as const, other: false });

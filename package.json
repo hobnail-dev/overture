@@ -26,6 +26,8 @@
         "build": "yarn turbo run build",
         "prepare": "yarn husky install",
         "test": "yarn turbo run test",
-        "pre-commit": "yarn lint-staged"
+        "pre-commit": "yarn lint-staged",
+        "result": "yarn workspace @hobnail/result",
+        "webapp": "yarn workspace @hobnail/webapp"
     }
 }
