@@ -1002,7 +1002,7 @@ export const result = <A, E, B, R extends YieldR<A, E, "Result">>(
         }
 
         const { value } = state;
-        return ((value as any) as Result<A, E>).andThen(val =>
+        return (value as any as Result<A, E>).andThen(val =>
             run(iterator.next(val))
         ) as any;
     }
@@ -1075,6 +1075,39 @@ export const Result = {
         }
     },
 
+    /**
+     * `fn: (...args -> A) -> (...args -> Result<A, Error>)`
+     *
+     * ---
+     * Transforms a function that might throw into a function that returns an `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Error`.
+     *
+     * @example
+     * const fun =
+     *   Result.fn((x: boolean) => {
+     *     if (x) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     *
+     * const x = fun(true).unwrapErr();
+     * expect(x).toBeInstanceOf(Error);
+     * expect(x.message).toEqual("oh no");
+     */
+    fn<F extends (...args: any[]) => any>(
+        f: F
+    ): (...args: Parameters<F>) => Result<ReturnType<F>, Error> {
+        return (...args: Parameters<F>) => {
+            try {
+                return Ok(f(...args));
+            } catch (e) {
+                const error = e instanceof Error ? e : new Error(stringify(e));
+
+                return Err(error, error.stack);
+            }
+        };
+    },
+
     instanceof<A = never, E = never>(r: unknown): r is Result<A, E> {
         return r instanceof OkImpl || r instanceof ErrImpl;
     },
@@ -1125,5 +1158,5 @@ export const Result = {
      */
     flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
         return r.andThen(x => x);
-    }
+    },
 };

@@ -81,6 +81,33 @@ describe("Result", () => {
         });
     });
 
+    describe("::fn", () => {
+        it("Transforms a function that might throw into a Result returning function", () => {
+            const fn = Result.fn((a: string) => a);
+
+            expect(fn("one").unwrap()).toEqual("one");
+        });
+
+        it("Returns an Err with the thrown Error when arg function throws", () => {
+            const fn = Result.fn(() => {
+                throw new Error("oh no");
+            });
+
+            expect(fn().unwrapErr().message).toEqual("oh no");
+            expect(fn().unwrapErr()).toBeInstanceOf(Error);
+        });
+
+        it("Creates an Err Result with an Error when arg function throws a value other than an Error", () => {
+            const fn = Result.fn(() => {
+                // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                throw "oops";
+            });
+
+            expect(fn().unwrapErr().message).toEqual("oops");
+            expect(fn().unwrapErr()).toBeInstanceOf(Error);
+        });
+    });
+
     describe(".isOk", () => {
         it("Returns true when the Result contains an Ok value", () => {
             const x = Ok(5);
@@ -229,7 +256,7 @@ describe("Result", () => {
 
         it("Does nothing if the Result is Ok", () => {
             const res = Ok(1).trace();
-            expect(((res as any) as Err<string>).stack).toBeUndefined();
+            expect((res as any as Err<string>).stack).toBeUndefined();
         });
     });
 
@@ -606,19 +633,13 @@ describe("Result", () => {
         const evenOrUndefined = (x: number) => (x % 2 === 0 ? x : undefined);
 
         it("Executes an Nullable returning function against the value of the Result when it is Ok, returning the Result, null or undefined", () => {
-            const a = Ok(1)
-                .map(evenOrNull)
-                .to(Result.transposeNullable);
+            const a = Ok(1).map(evenOrNull).to(Result.transposeNullable);
             expect(a).toBeNull();
 
-            const b = Ok(1)
-                .map(evenOrUndefined)
-                .to(Result.transposeNullable);
+            const b = Ok(1).map(evenOrUndefined).to(Result.transposeNullable);
             expect(b).toBeUndefined();
 
-            const c = Ok(2)
-                .map(evenOrUndefined)
-                .to(Result.transposeNullable);
+            const c = Ok(2).map(evenOrUndefined).to(Result.transposeNullable);
             expect(c!.unwrap()).toEqual(2);
         });
 
@@ -643,7 +664,7 @@ describe("Result", () => {
 
     describe("Computation Expression", () => {
         it("Happy path works correctly", () => {
-            const res = result(function*() {
+            const res = result(function* () {
                 const a = yield* Ok(5);
                 const b = yield* Ok(10);
                 const c = yield* Ok(15);
@@ -655,7 +676,7 @@ describe("Result", () => {
         });
 
         it("Failure path works correctly", () => {
-            const res = result(function*() {
+            const res = result(function* () {
                 const a = yield* Ok(5);
                 const b = yield* Err("oops");
                 const c = yield* Err("oh no!");
@@ -667,7 +688,7 @@ describe("Result", () => {
         });
 
         it("Resolves multiple error types", () => {
-            const res = result(function*() {
+            const res = result(function* () {
                 const a = yield* Ok(5);
                 const b = yield* Err({ kind: "B" as const, val: "oh no" });
                 const c = yield* Err({ kind: "C" as const, other: false });

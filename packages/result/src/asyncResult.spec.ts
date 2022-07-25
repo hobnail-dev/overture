@@ -3,7 +3,7 @@ import {
     AsyncErr,
     AsyncOk,
     AsyncResult,
-    asyncResult
+    asyncResult,
 } from "./asyncResult";
 import { Err, Ok, Result } from "./result";
 
@@ -96,6 +96,35 @@ describe("AsyncResult", () => {
             expect(err).toBeInstanceOf(Error);
             expect(err.name).toEqual("Oops");
             expect(err.message).toEqual("oops");
+        });
+    });
+
+    describe("::fn", () => {
+        it("Transforms a function that might throw into a AsyncResult returning function", async () => {
+            const fn = AsyncResult.fn(async (a: string) => a);
+
+            expect(await fn("one").unwrap()).toEqual("one");
+        });
+
+        it("Returns an Err with the thrown Error when arg function throws", async () => {
+            const fn = AsyncResult.fn(async () => {
+                throw new Error("oh no");
+            });
+
+            const err = await fn().unwrapErr();
+            expect(err.message).toEqual("oh no");
+            expect(err).toBeInstanceOf(Error);
+        });
+
+        it("Creates an Err AsyncResult with an Error when arg function throws a value other than an Error", async () => {
+            const fn = AsyncResult.fn(async () => {
+                // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                throw "oops";
+            });
+
+            const err = await fn().unwrapErr();
+            expect(err.message).toEqual("oops");
+            expect(err).toBeInstanceOf(Error);
         });
     });
 
@@ -587,7 +616,7 @@ describe("AsyncResult", () => {
 
     describe("Computation expression", () => {
         it("Happy path works correctly", async () => {
-            const foo = await asyncResult(function*() {
+            const foo = await asyncResult(function* () {
                 const a: number = yield* Promise.resolve(5);
                 const b: number = yield* Promise.resolve(
                     Ok<number, boolean>(3)
@@ -600,7 +629,7 @@ describe("AsyncResult", () => {
 
             expect(foo.unwrap()).toEqual(12);
 
-            const bar = await asyncResult(function*() {
+            const bar = await asyncResult(function* () {
                 const d: number = yield* Ok(2);
                 const c: number = yield* AsyncOk(2);
                 const b: number = yield* Async(Ok(3));
@@ -610,7 +639,7 @@ describe("AsyncResult", () => {
 
             expect(bar.unwrap()).toEqual(7);
 
-            const baz = await asyncResult(function*() {
+            const baz = await asyncResult(function* () {
                 const c: number = yield* AsyncOk(2);
                 const b: number = yield* Async(Ok(3));
 
@@ -619,7 +648,7 @@ describe("AsyncResult", () => {
 
             expect(baz.unwrap()).toEqual(5);
 
-            const bag = await asyncResult(function*() {
+            const bag = await asyncResult(function* () {
                 const b: number = yield* Async(Ok(3));
 
                 return b;
@@ -632,7 +661,7 @@ describe("AsyncResult", () => {
             const oops = (): Promise<Result<number, string>> =>
                 Async(Err("oops"));
 
-            const foo = await asyncResult(function*() {
+            const foo = await asyncResult(function* () {
                 const a = yield* Ok<number, boolean>(1);
                 const b = yield* oops();
 
@@ -641,7 +670,7 @@ describe("AsyncResult", () => {
 
             expect(foo.unwrapErr()).toEqual("oops");
 
-            const bar = await asyncResult(function*() {
+            const bar = await asyncResult(function* () {
                 const a: number = yield* Ok<number, boolean>(5);
                 const b: number = yield* AsyncErr("oh no");
                 const c: number = yield* Async(2);
@@ -651,7 +680,7 @@ describe("AsyncResult", () => {
 
             expect(bar.unwrapErr()).toEqual("oh no");
 
-            const baz = await asyncResult(function*() {
+            const baz = await asyncResult(function* () {
                 const a: number = yield* AsyncOk<number, false>(5);
                 const b: number = yield* Err("aaa");
                 const c: number = yield* Ok<number, string[]>(2);

@@ -106,14 +106,16 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      *     if (true) throw new Error("oh no")
      *     else return 1;
      *   });
-     * expect((await a.unwrapErr())).toBeInstanceOf(Error);
-     * expect((await a.unwrapErr()).name).toEqual("MyExnName");
-     * expect((await a.unwrapErr()).message).toEqual("oh no");
+     * const x = await a.unwrapErr();
+     * expect(x).toBeInstanceOf(Error);
+     * expect(x.name).toEqual("MyExnName");
+     * expect(x.message).toEqual("oh no");
      *
      * const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
-     * expect((await b.unwrapErr())).toBeInstanceOf(Error);
-     * expect((await b.unwrapErr()).name).toEqual("Panic!");
-     * expect((await b.unwrapErr()).message).toEqual("oops");
+     * const y = await b.unwrapErr();
+     * expect(y).toBeInstanceOf(Error);
+     * expect(y.name).toEqual("Panic!");
+     * expect(y.message).toEqual("oops");
      */
     static tryCatch<A, T extends string>(
         exnName: T,
@@ -129,6 +131,41 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
             });
 
         return AsyncResult.from(x);
+    }
+
+    /**
+     * `fn: (...args -> Promise<A>) -> (...args -> AsyncResult<A, Error>)`
+     *
+     * ---
+     * Transforms a async function that might throw into a function that returns an `AsyncResult`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Error`.
+     *
+     * @example
+     * const fun =
+     *   AsyncResult.fn(async (x: boolean) => {
+     *     if (x) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     *
+     * const x = await fun(true).unwrapErr();
+     * expect(x).toBeInstanceOf(Error);
+     * expect(x.message).toEqual("oh no");
+     */
+    static fn<F extends (...args: any[]) => Promise<any>>(
+        f: F
+    ): (...args: Parameters<F>) => AsyncResult<Awaited<ReturnType<F>>, Error> {
+        return (...args: Parameters<F>) =>
+            AsyncResult.from(
+                f(...args)
+                    .then(Ok)
+                    .catch(e => {
+                        const error =
+                            e instanceof Error ? e : new Error(stringify(e));
+
+                        return Err(error, error.stack);
+                    })
+            );
     }
 
     then<TResult1 = Result<A, E>, TResult2 = never>(
