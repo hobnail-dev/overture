@@ -516,9 +516,9 @@ abstract class ResultImpl<A = never, E = never> {
 class OkImpl<A, E = never> implements ResultImpl<A, E> {
     private constructor(
         /**
-         * this: Result<A, E>
+         * `this: Result<A, E>`
          *
-         * val: A
+         * `val: A`
          *
          * ---
          * The `Ok` value inside the `Result<A, E>`.
@@ -529,7 +529,22 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
          *   console.log(x.val); // only available when Result is Ok.
          * }
          */
-        readonly val: A
+        readonly val: A,
+        /**
+         * `this: Result<A, E>`
+         *
+         * `err: E | undefined`
+         *
+         * ---
+         * The raw `Err` value, inside the `Result<A, E>`.
+         * @example
+         * const x = Err(3);
+         *
+         * if (x.isErr()) {
+         *   console.log(x.err); // only available when Result is Err.
+         * }
+         */
+        readonly err?: E
     ) {}
 
     *[Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any> {
@@ -714,9 +729,9 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
 class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
     private constructor(
         /**
-         * this: Result<A, E>
+         * `this: Result<A, E>`
          *
-         * err: E | undefined
+         * `err: E`
          *
          * ---
          * The raw `Err` value, inside the `Result<A, E>`.
@@ -729,9 +744,9 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
          */
         readonly err: E,
         /**
-         * this: Result<A, E>
+         * `this: Result<A, E>`
          *
-         * stack: string | undefined
+         * `stack: string | undefined`
          *
          * ---
          * `Err` stack trace. Is only present if the `Result` is `Err` and has had the stack trace added to it with `.trace()`.
@@ -745,7 +760,22 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
          * const c = Err("oh no").trace();
          * expect(c.stack).toBeDefined();
          */
-        readonly stack?: string
+        readonly stack?: string,
+        /**
+         * `this: Result<A, E>`
+         *
+         * `val: A | undefined`
+         *
+         * ---
+         * The `Ok` value inside the `Result<A, E>`.
+         * @example
+         * const x = Ok(3);
+         *
+         * if (x.isOk()) {
+         *   console.log(x.val); // only available when Result is Ok.
+         * }
+         */
+        readonly val?: A
     ) {}
 
     static err<E = never>(error: E): Result<never, E>;
