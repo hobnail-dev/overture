@@ -115,13 +115,34 @@ const myResultReturningFn = (arg1: number): Result<number, Error> => {
 }
 ```
 
-Or you can use [`Result::try`](/result/reference/result.md#try). 
+You can also use [`Result::try`](/result/reference/result.md#try), which will catch any error thrown by the given function for you:
 
 ```ts
+import fs from 'node:fs';
 import { Result } from "@hobnail/result";
 
-const myResultReturningFn = (arg1: number): Result<number, Error> => 
-    Result.try(() => fnThatThrows(arg1));
+const { err } = Result.try(() => fs.writeFileSync("bla.log", "123bla"));
+
+if (err) {
+    console.log(`Error writing file: ${err.name}`);
+    console.log(`Stack trace: ${err.stack}`);
+}
+```
+
+Or [`Result::fn`](/result/reference/result.md#fn), which transforms any function that might throw into a function that works exactly the same but returns
+a `Result` that will contain the caught `Error` if the given function throws.
+
+```ts
+import fs from 'node:fs';
+import { Result } from "@hobnail/result";
+
+const writeFile = Result.fn(fs.writeFileSync); 
+const { err } = writeFile('bla.log', '123bla');
+
+if (err) {
+    console.log(`Error writing file: ${err.name}`);
+    console.log(`Stack trace: ${err.stack}`);
+}
 ```
 
 ### Array of Results

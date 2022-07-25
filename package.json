@@ -32,6 +32,7 @@
         "docs": "yarn docsify serve docs",
         "result": "yarn workspace @hobnail/result",
         "webapp": "yarn workspace @hobnail/webapp",
+        "appbuilder": "yarn workspace @hobnail/appbuilder",
         "tools": "yarn workspace @hobnail/internal-tools"
     }
 }

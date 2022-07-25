@@ -121,6 +121,27 @@ expect(b.unwrapErr().name).toEqual("Panic!");
 expect(b.unwrapErr().message).toEqual("oops");
 
 ```
+## ::fn 
+
+<span class="sig">`(...args -> A) -> (...args -> Result<A, Error>)`</span>
+
+Transforms a function that might throw into a function that returns an `Result`.
+
+Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Error`.
+##### example
+
+```ts
+const fun =
+  Result.fn((x: boolean) => {
+    if (x) throw new Error("oh no")
+    else return 1;
+  });
+
+const x = fun(true).unwrapErr();
+expect(x).toBeInstanceOf(Error);
+expect(x.message).toEqual("oh no");
+
+```
 ## ::transposePromise 
 
 <span class="sig">`Result<Promise<A>, E> -> AsyncResult<A, E>`</span>
