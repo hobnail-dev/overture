@@ -920,13 +920,14 @@ export const asyncResult = <A, E, B, R extends YieldR<A, E>>(
             if (value instanceof Promise) {
                 const prom = value as Promise<A | Result<A, E>>;
                 const promRes = prom.then(x =>
-                    Result.instanceof<A, E>(x) ? x : Ok(x)
+                    x instanceof Result ? x : Ok(x)
                 );
 
                 return AsyncResult.from(promRes);
             }
 
-            if (Result.instanceof(value)) return AsyncResult.fromResult(value);
+            if (value instanceof Result)
+                return AsyncResult.fromResult(value as any);
 
             throw new Error("Unrecognized yield* object");
         };

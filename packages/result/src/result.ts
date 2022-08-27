@@ -14,6 +14,213 @@ export type Ok<A, E = never> = OkImpl<A, E>;
 export type Err<E, A = never> = ErrImpl<A, E>;
 
 abstract class ResultImpl<A = never, E = never> {
+    /**
+     * `try: (() -> Result<A, E>) -> Result<A, Error | E>`
+     *
+     * ---
+     * Catches a function that might throw, adding a stack trace to the returning `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+     *
+     * @example
+     * const a: Result<number, Error | string> =
+     *   Result.try(() => {
+           const x = throwIfTrue(true);
+           if (x) return Ok(1);
+     *     else return Err("CustomError");
+     *   });
+     * expect(a.unwrapErr()).toBeInstanceOf(Error);
+     *
+     * const b = Result.try(() => { throw "oops" });
+     * expect(b.unwrapErr()).toBeInstanceOf(Error);
+     * expect(b.unwrapErr().message).toEqual("oops");
+     */
+    static try<A, E>(fn: () => Result<A, E>): Result<A, Error | E>;
+    /**
+     * `try: (() -> A) -> Result<A, Error>`
+     *
+     * ---
+     * Catches a function that might throw, adding a stack trace to the returning `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+     *
+     * @example
+     * const a: Result<number, Error> =
+     *   Result.try(() => {
+     *     if (true) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     * expect(a.unwrapErr()).toBeInstanceOf(Error);
+     *
+     * const b = Result.try(() => { throw "oops" });
+     * expect(b.unwrapErr()).toBeInstanceOf(Error);
+     * expect(b.unwrapErr().message).toEqual("oops");
+     */
+    static try<A>(fn: () => A): Result<A, Error>;
+    static try<A, E>(fn: () => Result<A, E> | A): Result<A, E | Error> {
+        try {
+            const x = fn();
+            return (x instanceof ResultImpl ? x : Ok(x)) as any;
+        } catch (e) {
+            const error = e instanceof Error ? e : new Error(stringify(e));
+
+            return Err(error, error.stack);
+        }
+    }
+
+    /**
+     * `tryCatch: (T extends string, () -> Result<A, E>) -> Result<A, Exn<T> | E>`
+     *
+     * ---
+     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
+     *
+     * @example
+     * const a: Result<number, Exn<"MyExnName"> | string> =
+     *   Result.tryCatch("MyExnName", () => {
+     *    const x = throwIfTrue(true);
+     *     if (x) return Ok(1);
+     *     else return Err("CustomError");
+     *   });
+     * expect(a.unwrapErr()).toBeInstanceOf(Error);
+     * expect(a.unwrapErr().kind).toEqual("MyExnName");
+     * expect(a.unwrapErr().message).toEqual("oh no");
+     *
+     * const b = Result.tryCatch("Panic!", () => { throw "oops" });
+     * expect(b.unwrapErr()).toBeInstanceOf(Error);
+     * expect(b.unwrapErr().kind).toEqual("Panic!");
+     * expect(b.unwrapErr().message).toEqual("oops");
+     */
+    static tryCatch<A, T extends string, E>(
+        kind: T,
+        fn: () => Result<A, E>
+    ): Result<A, Exn<T> | E>;
+    /**
+     * `tryCatch: (T extends string, () -> A) -> Result<A, Exn<T>>`
+     *
+     * ---
+     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
+     *
+     * @example
+     * const a: Result<number, Exn<"MyExnName">> =
+     *   Result.tryCatch("MyExnName", () => {
+     *     if (true) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     * expect(a.unwrapErr()).toBeInstanceOf(Error);
+     * expect(a.unwrapErr().kind).toEqual("MyExnName");
+     * expect(a.unwrapErr().message).toEqual("oh no");
+     *
+     * const b = Result.tryCatch("Panic!", () => { throw "oops" });
+     * expect(b.unwrapErr()).toBeInstanceOf(Error);
+     * expect(b.unwrapErr().kind).toEqual("Panic!");
+     * expect(b.unwrapErr().message).toEqual("oops");
+     */
+    static tryCatch<A, T extends string>(
+        kind: T,
+        fn: () => A
+    ): Result<A, Exn<T>>;
+    static tryCatch<A, T extends string, E>(
+        kind: T,
+        fn: () => Result<A, E> | A
+    ): Result<A, Exn<T>> {
+        try {
+            const x = fn();
+            return (x instanceof ResultImpl ? x : Ok(x)) as any;
+        } catch (e) {
+            const error = e instanceof Error ? e : new Error(stringify(e));
+            const exn = Exn(kind, error);
+
+            return Err(exn, error.stack);
+        }
+    }
+
+    /**
+     * `fn: (...args -> A) -> (...args -> Result<A, Error>)`
+     *
+     * ---
+     * Transforms a function that might throw into a function that returns an `Result`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Error`.
+     *
+     * @example
+     * const fun =
+     *   Result.fn((x: boolean) => {
+     *     if (x) throw new Error("oh no")
+     *     else return 1;
+     *   });
+     *
+     * const x = fun(true).unwrapErr();
+     * expect(x).toBeInstanceOf(Error);
+     * expect(x.message).toEqual("oh no");
+     */
+    static fn<F extends (...args: any[]) => any>(
+        f: F
+    ): (...args: Parameters<F>) => Result<ReturnType<F>, Error> {
+        return (...args: Parameters<F>) => {
+            try {
+                return Ok(f(...args));
+            } catch (e) {
+                const error = e instanceof Error ? e : new Error(stringify(e));
+
+                return Err(error, error.stack);
+            }
+        };
+    }
+
+    /**
+     * `transposePromise: Result<Promise<A>, E> -> AsyncResult<A, E>`
+     *
+     * ---
+     * Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
+     * @example
+     * declare getPokemon(id: number): Promise<Pokemon>;
+     * declare parseId(str: string): Result<number, string>;
+     *
+     * const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
+     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+     */
+    static transposePromise<A, E>(
+        rp: Result<Promise<A>, E>
+    ): AsyncResult<A, E> {
+        return rp.collectPromise(x => x);
+    }
+
+    /**
+     * `transposeNullable: Result<A | null | undefined, E> -> Result<A, E> | null | undefined`
+     *
+     * ---
+     * Tranposes a `Result<A | null | undefined, E>` into a `Result<A, E> | null | undefined`.
+     * @example
+     * const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
+     * const x: Result<number | null, string> = Ok(3).map(evenOrNull);
+     * const y: Result<number, string> | null | undefined = Result.tranposeNullable(x);
+     */
+    static transposeNullable<A, E>(
+        ro: Result<A | null | undefined, E>
+    ): Result<A, E> | null | undefined {
+        return ro.collectNullable(x => x);
+    }
+
+    /**
+     * `flatten: Result<Result<A, E>, F> -> Result<A, E | F>`
+     *
+     * ---
+     * Converts from `Result<Result<A, E>, F>` to a `Result<A, E | F>`.
+     * @example
+     * const x = Result.flatten(Ok(Ok(3)));
+     * expect(x.unwrap()).toEqual(3);
+     *
+     * const y = Result.flatten(Ok(Err("oops")));
+     * expect(y.unwrapErr()).toEqual("oops");
+     */
+    static flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
+        return r.andThen(x => x);
+    }
+
     abstract [Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any>;
 
     abstract isOk(): this is Ok<A, E>;
@@ -513,7 +720,9 @@ abstract class ResultImpl<A = never, E = never> {
     ): Result<B, E> | null | undefined;
 }
 
-class OkImpl<A, E = never> implements ResultImpl<A, E> {
+export const Result = ResultImpl;
+
+class OkImpl<A, E = never> extends ResultImpl<A, E> {
     private constructor(
         /**
          * `this: Result<A, E>`
@@ -545,7 +754,9 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
          * }
          */
         readonly err?: E
-    ) {}
+    ) {
+        super();
+    }
 
     *[Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any> {
         return yield this as any;
@@ -726,7 +937,7 @@ class OkImpl<A, E = never> implements ResultImpl<A, E> {
         return Ok(x);
     }
 }
-class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
+class ErrImpl<A = never, E = never> extends ResultImpl<A, E> {
     private constructor(
         /**
          * `this: Result<A, E>`
@@ -776,7 +987,9 @@ class ErrImpl<A = never, E = never> implements ResultImpl<A, E> {
          * }
          */
         readonly val?: A
-    ) {}
+    ) {
+        super();
+    }
 
     static err<E = never>(error: E): Result<never, E>;
     static err<E = never>(error: E, stack?: string): Result<never, E>;
@@ -1038,155 +1251,4 @@ export const result = <A, E, B, R extends YieldR<A, E, "Result">>(
     }
 
     return run(state) as any;
-};
-
-export const Result = {
-    /**
-     * `try: (() -> A) -> Result<A, Error>`
-     *
-     * ---
-     * Catches a function that might throw, adding a stack trace to the returning `Result`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
-     *
-     * @example
-     * const a: Result<number, Error> =
-     *   Result.try(() => {
-     *     if (true) throw new Error("oh no")
-     *     else return 1;
-     *   });
-     * expect(a.unwrapErr()).toBeInstanceOf(Error);
-     *
-     * const b = Result.try(() => { throw "oops" });
-     * expect(b.unwrapErr()).toBeInstanceOf(Error);
-     * expect(b.unwrapErr().message).toEqual("oops");
-     */
-    try<A>(fn: () => A): Result<A, Error> {
-        try {
-            return Ok(fn());
-        } catch (e) {
-            const error = e instanceof Error ? e : new Error(stringify(e));
-
-            return Err(error, error.stack);
-        }
-    },
-
-    /**
-     * `tryCatch: (T extends string, () -> A) -> Result<A, Exn<T>>`
-     *
-     * ---
-     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
-     *
-     * @example
-     * const a: Result<number, Exn<"MyExnName">> =
-     *   Result.tryCatch("MyExnName", () => {
-     *     if (true) throw new Error("oh no")
-     *     else return 1;
-     *   });
-     * expect(a.unwrapErr()).toBeInstanceOf(Error);
-     * expect(a.unwrapErr().name).toEqual("MyExnName");
-     * expect(a.unwrapErr().message).toEqual("oh no");
-     *
-     * const b = Result.tryCatch("Panic!", () => { throw "oops" });
-     * expect(b.unwrapErr()).toBeInstanceOf(Error);
-     * expect(b.unwrapErr().name).toEqual("Panic!");
-     * expect(b.unwrapErr().message).toEqual("oops");
-     */
-    tryCatch<A, T extends string>(kind: T, fn: () => A): Result<A, Exn<T>> {
-        try {
-            return Ok(fn());
-        } catch (e) {
-            const error = e instanceof Error ? e : new Error(stringify(e));
-            const exn = Exn(kind, error);
-
-            return Err(exn, error.stack);
-        }
-    },
-
-    /**
-     * `fn: (...args -> A) -> (...args -> Result<A, Error>)`
-     *
-     * ---
-     * Transforms a function that might throw into a function that returns an `Result`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Error`.
-     *
-     * @example
-     * const fun =
-     *   Result.fn((x: boolean) => {
-     *     if (x) throw new Error("oh no")
-     *     else return 1;
-     *   });
-     *
-     * const x = fun(true).unwrapErr();
-     * expect(x).toBeInstanceOf(Error);
-     * expect(x.message).toEqual("oh no");
-     */
-    fn<F extends (...args: any[]) => any>(
-        f: F
-    ): (...args: Parameters<F>) => Result<ReturnType<F>, Error> {
-        return (...args: Parameters<F>) => {
-            try {
-                return Ok(f(...args));
-            } catch (e) {
-                const error = e instanceof Error ? e : new Error(stringify(e));
-
-                return Err(error, error.stack);
-            }
-        };
-    },
-
-    instanceof<A = never, E = never>(r: unknown): r is Result<A, E> {
-        return r instanceof OkImpl || r instanceof ErrImpl;
-    },
-
-    /**
-     * `transposePromise: Result<Promise<A>, E> -> AsyncResult<A, E>`
-     *
-     * ---
-     * Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
-     * @example
-     * declare getPokemon(id: number): Promise<Pokemon>;
-     * declare parseId(str: string): Result<number, string>;
-     *
-     * const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
-     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
-     */
-    transposePromise<A, E>(rp: Result<Promise<A>, E>): AsyncResult<A, E> {
-        return rp.collectPromise(x => x);
-    },
-
-    /**
-     * `transposeNullable: Result<A | null | undefined, E> -> Result<A, E> | null | undefined`
-     *
-     * ---
-     * Tranposes a `Result<A | null | undefined, E>` into a `Result<A, E> | null | undefined`.
-     * @example
-     * const evenOrNull = (n: number): number | null => n % 2 === 0 ? n : null;
-     * const x: Result<number | null, string> = Ok(3).map(evenOrNull);
-     * const y: Result<number, string> | null | undefined = Result.tranposeNullable(x);
-     */
-    transposeNullable<A, E>(
-        ro: Result<A | null | undefined, E>
-    ): Result<A, E> | null | undefined {
-        return ro.collectNullable(x => x);
-    },
-
-    /**
-     * `flatten: Result<Result<A, E>, F> -> Result<A, E | F>`
-     *
-     * ---
-     * Converts from `Result<Result<A, E>, F>` to a `Result<A, E | F>`.
-     * @example
-     * const x = Result.flatten(Ok(Ok(3)));
-     * expect(x.unwrap()).toEqual(3);
-     *
-     * const y = Result.flatten(Ok(Err("oops")));
-     * expect(y.unwrapErr()).toEqual("oops");
-     */
-    flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
-        return r.andThen(x => x);
-    },
 };

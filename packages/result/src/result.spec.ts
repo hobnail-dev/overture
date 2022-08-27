@@ -1,3 +1,4 @@
+import { unit } from ".";
 import { AsyncResult } from "./asyncResult";
 import { Err, Ok, Result, result } from "./result";
 
@@ -32,9 +33,22 @@ describe("Result", () => {
             expect(x.unwrap()).toEqual("didn't throw");
         });
 
+        it("Creates an Ok Result from a function that might throw but instead returned an Ok", () => {
+            const x = Result.try(() => Ok("hello"));
+
+            expect(x.unwrap()).toEqual("hello");
+        });
+
+        it("Creates an Err Result from a function that might throw but instead returned an Err", () => {
+            const x = Result.try(() => Err("hello"));
+
+            expect(x.unwrapErr()).toEqual("hello");
+        });
+
         it("Creates an Err Result with an Error from a function that throws", () => {
             const x = Result.try(() => {
                 throw new Error("oh no");
+                return unit;
             });
 
             expect(x.unwrapErr().message).toEqual("oh no");
@@ -45,6 +59,7 @@ describe("Result", () => {
             const x = Result.try(() => {
                 // eslint-disable-next-line @typescript-eslint/no-throw-literal
                 throw "oops";
+                return unit;
             });
 
             expect(x.unwrapErr().message).toEqual("oops");
@@ -59,9 +74,22 @@ describe("Result", () => {
             expect(x.unwrap()).toEqual("didn't throw");
         });
 
+        it("Creates an Ok Result from a function that might throw but instead returned an Ok", () => {
+            const x = Result.tryCatch("something", () => Ok("hello"));
+
+            expect(x.unwrap()).toEqual("hello");
+        });
+
+        it("Creates an Err Result from a function that might throw but instead returned an Err", () => {
+            const x = Result.tryCatch("something", () => Err("hello"));
+
+            expect(x.unwrapErr()).toEqual("hello");
+        });
+
         it("Creates an Err Result with an Error from a function that throws", () => {
             const x = Result.tryCatch("OhNo", () => {
                 throw new Error("oh no");
+                return unit;
             });
 
             expect(x.unwrapErr().kind).toEqual("OhNo");
@@ -73,6 +101,7 @@ describe("Result", () => {
             const x = Result.tryCatch("Oops", () => {
                 // eslint-disable-next-line @typescript-eslint/no-throw-literal
                 throw "oops";
+                return unit;
             });
 
             expect(x.unwrapErr().kind).toEqual("Oops");
@@ -589,26 +618,6 @@ describe("Result", () => {
             const res = Err("oops").collectNullable(evenOrNull);
 
             expect(res!.unwrapErr()).toEqual("oops");
-        });
-    });
-
-    describe("::instanceof", () => {
-        it("Returns true if value is an instance of Result", () => {
-            const a = Ok(1);
-            const b = Err("one");
-            const c = {};
-
-            expect(Result.instanceof(a)).toBe(true);
-            expect(Result.instanceof(b)).toBe(true);
-            expect(Result.instanceof(c)).toBe(false);
-        });
-
-        it("Returns false if the value is not an instance of Result", () => {
-            const a = [{}, "a", 1, false, new Map()]
-                .map(Result.instanceof)
-                .every(x => x === false);
-
-            expect(a).toBe(true);
         });
     });
 
