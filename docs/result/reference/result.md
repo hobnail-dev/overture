@@ -234,7 +234,7 @@ const y = Result.flatten(Ok(Err("oops")));
 expect(y.unwrapErr()).toEqual("oops");
 
 ```
-## ::collect 
+## ::fromRecord 
 
 <span class="sig">`Record<string, Result<any, E>> -> Result<Record<string, any>, E[]>`</span>
 
@@ -246,7 +246,7 @@ declare function validateName(str: string): Result<string, string>;
 declare function validateEmail(str: string): Result<string, string>;
 declare function validateAge(str: string): Result<number, string>;
 
-const rick = Result.collect({
+const rick = Result.fromRecord({
   name: validateName("Rick"),
   email: validateEmail("rick.com"),
   age: validateAge(76),
@@ -257,12 +257,27 @@ expect(rick.unwrap()).toEqual({
   age: 76
 });
 
-const morty = Result.collect({
+const morty = Result.fromRecord({
   name: validateName("Morty"),
   email: validateEmail("morty.com"),
   age: validateAge(-5),
 });
 expect(morty.unwrapErr()).toEqual(["invalid email", "invalid age"]);
+
+```
+## ::join 
+
+<span class="sig">`Array<Result<A, E>> -> Result<Array<A>, Array<E>>`</span>
+
+Returns a `Result` with either an array of `A` if all elements in the given argument are `Ok`, or an array of `E` with the err of all `Err` elements.
+##### example
+
+```ts
+const { val } = Result.join([Ok(1), Ok(2), Ok(3)]);
+ expect(val).toEqual([1, 2, 3]);
+
+const { err } = Result.join([Ok(1), Err("oops"), Err("oh no")]);
+expect(err).toEqual(["oops", "oh no"]);
 
 ```
 ## .isOkWith 
