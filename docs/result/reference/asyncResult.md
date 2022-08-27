@@ -133,7 +133,30 @@ expecy(await y.unwrap()).toEqual(3);
 ```
 ## ::try 
 
-<span class="sig">`(() -> A) -> AsyncResult<A, Error>`</span>
+<span class="sig">`(() -> Promise<A, E>) -> AsyncResult<A, Error | E>`</span>
+
+Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
+
+Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+##### example
+
+```ts
+const a: AsyncResult<number, Error | string> =
+  AsyncResult.try(async () => {
+    const x = throwIftrue(true);
+    if (x) return Ok(1);
+    else return Err("CustomError");
+  });
+expect((await a.unwrapErr())).toBeInstanceOf(Error);
+
+const b = AsyncResult.try(async () => { throw "oops" });
+expect((await b.unwrapErr())).toBeInstanceOf(Error);
+expect((await b.unwrapErr()).message).toEqual("oops");
+
+```
+## ::try 
+
+<span class="sig">`(() -> Promise<A>) -> AsyncResult<A, Error>`</span>
 
 Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
 
@@ -155,7 +178,35 @@ expect((await b.unwrapErr()).message).toEqual("oops");
 ```
 ## ::tryCatch 
 
-<span class="sig">`(T extends string, () -> A) -> AsyncResult<A, Exn<T>>`</span>
+<span class="sig">`(T extends string, () -> Promise<Result<A, E>>) -> AsyncResult<A, Exn<T>>`</span>
+
+Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
+
+Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
+##### example
+
+```ts
+const a: AsyncResult<number, Exn<"MyExnName"> | string> =
+  AsyncResult.tryCatch("MyExnName", async () => {
+    const x = throwIfTrue(true);
+    if (x) return Ok(1);
+    else return Err("CustomError");
+  });
+const x = await a.unwrapErr();
+expect(x).toBeInstanceOf(Error);
+expect(x.kind).toEqual("MyExnName");
+expect(x.message).toEqual("oh no");
+
+const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
+const y = await b.unwrapErr();
+expect(y).toBeInstanceOf(Error);
+expect(y.kind).toEqual("Panic!");
+expect(y.message).toEqual("oops");
+
+```
+## ::tryCatch 
+
+<span class="sig">`(T extends string, () -> Promise<A>) -> AsyncResult<A, Exn<T>>`</span>
 
 Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
 
@@ -170,13 +221,13 @@ const a: AsyncResult<number, Exn<"MyExnName">> =
   });
 const x = await a.unwrapErr();
 expect(x).toBeInstanceOf(Error);
-expect(x.name).toEqual("MyExnName");
+expect(x.kind).toEqual("MyExnName");
 expect(x.message).toEqual("oh no");
 
 const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
 const y = await b.unwrapErr();
 expect(y).toBeInstanceOf(Error);
-expect(y.name).toEqual("Panic!");
+expect(y.kind).toEqual("Panic!");
 expect(y.message).toEqual("oops");
 
 ```

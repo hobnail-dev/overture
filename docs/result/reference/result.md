@@ -76,6 +76,29 @@ const y = (() => {
 ```
 ## ::try 
 
+<span class="sig">`(() -> Result<A, E>) -> Result<A, Error | E>`</span>
+
+Catches a function that might throw, adding a stack trace to the returning `Result`.
+
+Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+##### example
+
+```ts
+const a: Result<number, Error | string> =
+  Result.try(() => {
+          const x = throwIfTrue(true);
+          if (x) return Ok(1);
+    else return Err("CustomError");
+  });
+expect(a.unwrapErr()).toBeInstanceOf(Error);
+
+const b = Result.try(() => { throw "oops" });
+expect(b.unwrapErr()).toBeInstanceOf(Error);
+expect(b.unwrapErr().message).toEqual("oops");
+
+```
+## ::try 
+
 <span class="sig">`(() -> A) -> Result<A, Error>`</span>
 
 Catches a function that might throw, adding a stack trace to the returning `Result`.
@@ -98,6 +121,32 @@ expect(b.unwrapErr().message).toEqual("oops");
 ```
 ## ::tryCatch 
 
+<span class="sig">`(T extends string, () -> Result<A, E>) -> Result<A, Exn<T> | E>`</span>
+
+Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
+
+Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
+##### example
+
+```ts
+const a: Result<number, Exn<"MyExnName"> | string> =
+  Result.tryCatch("MyExnName", () => {
+   const x = throwIfTrue(true);
+    if (x) return Ok(1);
+    else return Err("CustomError");
+  });
+expect(a.unwrapErr()).toBeInstanceOf(Error);
+expect(a.unwrapErr().kind).toEqual("MyExnName");
+expect(a.unwrapErr().message).toEqual("oh no");
+
+const b = Result.tryCatch("Panic!", () => { throw "oops" });
+expect(b.unwrapErr()).toBeInstanceOf(Error);
+expect(b.unwrapErr().kind).toEqual("Panic!");
+expect(b.unwrapErr().message).toEqual("oops");
+
+```
+## ::tryCatch 
+
 <span class="sig">`(T extends string, () -> A) -> Result<A, Exn<T>>`</span>
 
 Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
@@ -112,12 +161,12 @@ const a: Result<number, Exn<"MyExnName">> =
     else return 1;
   });
 expect(a.unwrapErr()).toBeInstanceOf(Error);
-expect(a.unwrapErr().name).toEqual("MyExnName");
+expect(a.unwrapErr().kind).toEqual("MyExnName");
 expect(a.unwrapErr().message).toEqual("oh no");
 
 const b = Result.tryCatch("Panic!", () => { throw "oops" });
 expect(b.unwrapErr()).toBeInstanceOf(Error);
-expect(b.unwrapErr().name).toEqual("Panic!");
+expect(b.unwrapErr().kind).toEqual("Panic!");
 expect(b.unwrapErr().message).toEqual("oops");
 
 ```
