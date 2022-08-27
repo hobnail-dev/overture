@@ -137,9 +137,9 @@ describe("Result", () => {
         });
     });
 
-    describe("::collect", () => {
-        it("Happy path", () => {
-            const res = Result.collect({
+    describe("::fromRecord", () => {
+        test("Happy path", () => {
+            const res = Result.fromRecord({
                 firstName: Ok("john"),
                 lastName: Ok("doe"),
                 age: Ok(99),
@@ -152,8 +152,8 @@ describe("Result", () => {
             });
         });
 
-        it("Sad path", () => {
-            const res = Result.collect({
+        test("Sad path", () => {
+            const res = Result.fromRecord({
                 firstName: Err("cannot be null"),
                 lastName: Ok("doe"),
                 age: Err(false),
@@ -162,6 +162,23 @@ describe("Result", () => {
             const expected = ["cannot be null", false];
 
             expect(res.err).toEqual(expected);
+        });
+    });
+
+    describe("::join", () => {
+        it("Returns all the Ok values from an array of Results if all are Ok", () => {
+            const { val } = Result.join([Ok(1), Ok(2), Ok(3)]);
+            expect(val).toEqual([1, 2, 3]);
+        });
+
+        it("Returns all the Err values from an array of Results if any is an Err", () => {
+            const { err } = Result.join([
+                Ok(1),
+                Err("oops"),
+                Ok(3),
+                Err("oops again"),
+            ]);
+            expect(err).toEqual(["oops", "oops again"]);
         });
     });
 

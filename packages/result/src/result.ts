@@ -1,3 +1,5 @@
+import "./array";
+
 import { Arr } from "./__utils";
 import { AsyncResult } from "./asyncResult";
 import { Exn } from "./exn";
@@ -223,7 +225,7 @@ abstract class ResultImpl<A = never, E = never> {
     }
 
     /**
-     * `collect: Record<string, Result<any, E>> -> Result<Record<string, any>, E[]>`
+     * `fromRecord: Record<string, Result<any, E>> -> Result<Record<string, any>, E[]>`
      *
      * ---
      * Collects all possible errors from an Object where every key has a Result as a value.
@@ -232,7 +234,7 @@ abstract class ResultImpl<A = never, E = never> {
      * declare function validateEmail(str: string): Result<string, string>;
      * declare function validateAge(str: string): Result<number, string>;
      *
-     * const rick = Result.collect({
+     * const rick = Result.fromRecord({
      *   name: validateName("Rick"),
      *   email: validateEmail("rick@rickandmortyadventures.com"),
      *   age: validateAge(76),
@@ -243,14 +245,14 @@ abstract class ResultImpl<A = never, E = never> {
      *   age: 76
      * });
      *
-     * const morty = Result.collect({
+     * const morty = Result.fromRecord({
      *   name: validateName("Morty"),
      *   email: validateEmail("morty.com"),
      *   age: validateAge(-5),
      * });
      * expect(morty.unwrapErr()).toEqual(["invalid email", "invalid age"]);
      */
-    static collect = <
+    static fromRecord = <
         T extends Record<string, Result<any, E>>,
         E,
         K extends keyof T
@@ -275,6 +277,27 @@ abstract class ResultImpl<A = never, E = never> {
         }
 
         return Err(errEntries.map(([_, val]) => val.err)) as any;
+    };
+
+    /**
+     * `join: Array<Result<A, E>> -> Result<Array<A>, Array<E>>`
+     *
+     * ---
+     * @returns a `Result` with either an array of `A` if all elements in the given argument are `Ok`, or an array of `E` with the err of all `Err` elements.
+     * @example
+     *  const { val } = Result.join([Ok(1), Ok(2), Ok(3)]);
+     *  expect(val).toEqual([1, 2, 3]);
+     *
+     * const { err } = Result.join([Ok(1), Err("oops"), Err("oh no")]);
+     * expect(err).toEqual(["oops", "oh no"]);
+     */
+    static join = <A, E>(rs: Result<A, E>[]): Result<A[], E[]> => {
+        const [oks, errs] = Array.partitionResults(rs);
+        if (errs.length === 0) {
+            return Ok(oks);
+        }
+
+        return Err(errs);
     };
 
     abstract [Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any>;
