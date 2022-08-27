@@ -1,3 +1,4 @@
+import { Arr } from "./__utils";
 import { AsyncResult } from "./asyncResult";
 import { Exn } from "./exn";
 import { YieldR } from "./typeUtils";
@@ -220,6 +221,61 @@ abstract class ResultImpl<A = never, E = never> {
     static flatten<A, E, F>(r: Result<Result<A, E>, F>): Result<A, E | F> {
         return r.andThen(x => x);
     }
+
+    /**
+     * `collect: Record<string, Result<any, E>> -> Result<Record<string, any>, E[]>`
+     *
+     * ---
+     * Collects all possible errors from an Object where every key has a Result as a value.
+     * @example
+     * declare function validateName(str: string): Result<string, string>;
+     * declare function validateEmail(str: string): Result<string, string>;
+     * declare function validateAge(str: string): Result<number, string>;
+     *
+     * const rick = Result.collect({
+     *   name: validateName("Rick"),
+     *   email: validateEmail("rick@rickandmortyadventures.com"),
+     *   age: validateAge(76),
+     * });
+     * expect(rick.unwrap()).toEqual({
+     *   name: "Rick",
+     *   email: "rick@rickandmortyadventures.com",
+     *   age: 76
+     * });
+     *
+     * const morty = Result.collect({
+     *   name: validateName("Morty"),
+     *   email: validateEmail("morty.com"),
+     *   age: validateAge(-5),
+     * });
+     * expect(morty.unwrapErr()).toEqual(["invalid email", "invalid age"]);
+     */
+    static collect = <
+        T extends Record<string, Result<any, E>>,
+        E,
+        K extends keyof T
+    >(
+        results: T
+    ): Result<
+        { [k in K]: ReturnType<T[k]["unwrap"]> },
+        Array<ReturnType<T[K]["unwrapErr"]>>
+    > => {
+        const entries = Object.entries(results);
+        const [okEntries, errEntries] = Arr.partition(entries, ([_, val]) =>
+            val.isOk()
+        );
+
+        if (errEntries.length === 0) {
+            return Ok(
+                okEntries.reduce(
+                    (obj, [key, val]) => ({ ...obj, [key]: val.val }),
+                    {}
+                )
+            ) as any;
+        }
+
+        return Err(errEntries.map(([_, val]) => val.err)) as any;
+    };
 
     abstract [Symbol.iterator](): Generator<YieldR<A, E, "Result">, A, any>;
 

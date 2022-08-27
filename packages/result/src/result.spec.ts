@@ -137,6 +137,34 @@ describe("Result", () => {
         });
     });
 
+    describe("::collect", () => {
+        it("Happy path", () => {
+            const res = Result.collect({
+                firstName: Ok("john"),
+                lastName: Ok("doe"),
+                age: Ok(99),
+            });
+
+            expect(res.val).toEqual({
+                firstName: "john",
+                lastName: "doe",
+                age: 99,
+            });
+        });
+
+        it("Sad path", () => {
+            const res = Result.collect({
+                firstName: Err("cannot be null"),
+                lastName: Ok("doe"),
+                age: Err(false),
+            });
+
+            const expected = ["cannot be null", false];
+
+            expect(res.err).toEqual(expected);
+        });
+    });
+
     describe(".isOk", () => {
         it("Returns true when the Result contains an Ok value", () => {
             const x = Ok(5);

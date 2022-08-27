@@ -234,6 +234,37 @@ const y = Result.flatten(Ok(Err("oops")));
 expect(y.unwrapErr()).toEqual("oops");
 
 ```
+## ::collect 
+
+<span class="sig">`Record<string, Result<any, E>> -> Result<Record<string, any>, E[]>`</span>
+
+Collects all possible errors from an Object where every key has a Result as a value.
+##### example
+
+```ts
+declare function validateName(str: string): Result<string, string>;
+declare function validateEmail(str: string): Result<string, string>;
+declare function validateAge(str: string): Result<number, string>;
+
+const rick = Result.collect({
+  name: validateName("Rick"),
+  email: validateEmail("rick.com"),
+  age: validateAge(76),
+});
+expect(rick.unwrap()).toEqual({
+  name: "Rick",
+  email: "rick.com",
+  age: 76
+});
+
+const morty = Result.collect({
+  name: validateName("Morty"),
+  email: validateEmail("morty.com"),
+  age: validateAge(-5),
+});
+expect(morty.unwrapErr()).toEqual(["invalid email", "invalid age"]);
+
+```
 ## .isOkWith 
 
 <span class="sig">`A -> boolean`</span>
