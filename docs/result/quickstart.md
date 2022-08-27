@@ -1,6 +1,6 @@
 # Quick Start
 
-In this section I'll quickly cover how to use `Result` to deal with synchronous errors, `AsyncResult` to deal with asynchronous ones (think `fetch` or dealing with databases, etc), and I'll also cover how to deal with multiple Results at once, e.g., an array of Results.
+In this section I'll quickly cover how to use `Result` to deal with synchronous errors, `Task` to deal with asynchronous ones (think `fetch` or dealing with databases, etc), and I'll also cover how to deal with multiple Results at once, e.g., an array of Results.
 
 ## Installing the library
 ```bash
@@ -217,26 +217,26 @@ if (num.isOk()) {
 ### More
 Head on over the the [Result reference page](result/reference/result.md#result) for a comprehensive list of all the things you can do with it.
 
-## Using `AsyncResult<A, E>`
+## Using `Task<A, E>`
 When developing software, a lot of the time we'll have to deal with asynchronous values. Here in particular I'm talking about the times you'll return `Promise<Result<A, E>>` from a function.
 
-With [`AsyncResult::from`](result/reference/asyncResult.md#from) you can easily convert the `Promise<Result<A, E>>` into a `AsyncResult<A, E>` and have much of the functionality available to `Result<A, E>`, except async! It is also possible to create `AsyncResult` values using the [`AsyncOk`](result/reference/asyncResult.md#asyncok) and [`AsyncErr`](result/reference/asyncResult.md#asyncerr), which behave just like their regular counterparts.
+With [`Task::from`](result/reference/task.md#from) you can easily convert the `Promise<Result<A, E>>` into a `Task<A, E>` and have much of the functionality available to `Result<A, E>`, except async! It is also possible to create `Task` values using the [`AsyncOk`](result/reference/task.md#asyncok) and [`AsyncErr`](result/reference/task.md#asyncerr) functions, which behave just like their regular counterparts.
 
-You can also await `AsyncResult`, since it implements the `PromiseLike` interface it's compatible with pretty much everything that uses Promises :-)
+You can also await `Task`, since it implements the `PromiseLike` interface it's compatible with pretty much everything that uses Promises :-)
 
-There is however, **no need to manually create AsyncResults most of the time**. You can simply use the `asyncResult` block. With it, you can use `yield*` to await Promises, to return early from Results, and to await and return early from any `Promise<Result<A, E>>` and AsyncResults!
+There is however, **no need to manually create Tasks most of the time**. You can simply use the `task` block. With it, you can use `yield*` to await Promises, to return early from Results, and to await and return early from any `Promise<Result<A, E>>` and Tasks!
 
 Below is an example using all of the types mentioned up above:
 ```ts
-import { asyncResult, Result, AsyncResult } from "@hobnail/result";
+import { Result, Task, task } from "@hobnail/result";
 
-declare function getUserInput(): AsyncResult<string, InputError>;
+declare function getUserInput(): Task<string, InputError>;
 declare function parseNum(str: string): Result<number, ParseError>;
-declare function fetchPokemon(pokeNumber: number): AsyncResult<Pokemon, FetchError>;
+declare function fetchPokemon(pokeNumber: number): Task<Pokemon, FetchError>;
 declare function calculatePower(pokemon: Pokemon): Promise<number>;
 
-const getPokemonPower = (): AsyncResult<number, InputError | ParseError | FetchError> =>
-    asyncResult(function*() {
+const getPokemonPower = (): Task<number, InputError | ParseError | FetchError> =>
+    task(function*() {
         const input = yield* getUserInput();
         const pokeNum = yield* parseNum(input);
         const pokemon = yield* fetchPokemon(pokeNum);
@@ -254,4 +254,4 @@ const power = await getPokemonPower().mapOrElse(
 
 
 ### More
-Head on over the the [AsyncResult reference page](result/reference/asyncResult.md#asyncresult) for a comprehensive list of all the things you can do with it.
+Head on over the the [Task reference page](result/reference/task.md#task) for a comprehensive list of all the things you can do with it.

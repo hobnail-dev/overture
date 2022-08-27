@@ -1,8 +1,8 @@
 import "./array";
 
 import { Arr } from "./__utils";
-import { AsyncResult } from "./asyncResult";
 import { Exn } from "./exn";
+import { Task } from "./task";
 import { YieldR } from "./typeUtils";
 
 const stringify = (e: unknown) =>
@@ -17,28 +17,6 @@ export type Ok<A, E = never> = OkImpl<A, E>;
 export type Err<E, A = never> = ErrImpl<A, E>;
 
 abstract class ResultImpl<A = never, E = never> {
-    /**
-     * `try: (() -> Result<A, E>) -> Result<A, Error | E>`
-     *
-     * ---
-     * Catches a function that might throw, adding a stack trace to the returning `Result`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
-     *
-     * @example
-     * const a: Result<number, Error | string> =
-     *   Result.try(() => {
-           const x = throwIfTrue(true);
-           if (x) return Ok(1);
-     *     else return Err("CustomError");
-     *   });
-     * expect(a.unwrapErr()).toBeInstanceOf(Error);
-     *
-     * const b = Result.try(() => { throw "oops" });
-     * expect(b.unwrapErr()).toBeInstanceOf(Error);
-     * expect(b.unwrapErr().message).toEqual("oops");
-     */
-    static try<A, E>(fn: () => Result<A, E>): Result<A, Error | E>;
     /**
      * `try: (() -> A) -> Result<A, Error>`
      *
@@ -60,47 +38,8 @@ abstract class ResultImpl<A = never, E = never> {
      * expect(b.unwrapErr().message).toEqual("oops");
      */
     static try<A>(fn: () => A): Result<A, Error>;
-    static try<A, E>(fn: () => Result<A, E> | A): Result<A, E | Error> {
-        try {
-            const x = fn();
-            return (x instanceof ResultImpl ? x : Ok(x)) as any;
-        } catch (e) {
-            const error = e instanceof Error ? e : new Error(stringify(e));
-
-            return Err(error, error.stack);
-        }
-    }
-
     /**
-     * `tryCatch: (T extends string, () -> Result<A, E>) -> Result<A, Exn<T> | E>`
-     *
-     * ---
-     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
-     *
-     * @example
-     * const a: Result<number, Exn<"MyExnName"> | string> =
-     *   Result.tryCatch("MyExnName", () => {
-     *    const x = throwIfTrue(true);
-     *     if (x) return Ok(1);
-     *     else return Err("CustomError");
-     *   });
-     * expect(a.unwrapErr()).toBeInstanceOf(Error);
-     * expect(a.unwrapErr().kind).toEqual("MyExnName");
-     * expect(a.unwrapErr().message).toEqual("oh no");
-     *
-     * const b = Result.tryCatch("Panic!", () => { throw "oops" });
-     * expect(b.unwrapErr()).toBeInstanceOf(Error);
-     * expect(b.unwrapErr().kind).toEqual("Panic!");
-     * expect(b.unwrapErr().message).toEqual("oops");
-     */
-    static tryCatch<A, T extends string, E>(
-        kind: T,
-        fn: () => Result<A, E>
-    ): Result<A, Exn<T> | E>;
-    /**
-     * `tryCatch: (T extends string, () -> A) -> Result<A, Exn<T>>`
+     * `try: (T extends string, () -> A) -> Result<A, Exn<T>>`
      *
      * ---
      * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
@@ -109,7 +48,7 @@ abstract class ResultImpl<A = never, E = never> {
      *
      * @example
      * const a: Result<number, Exn<"MyExnName">> =
-     *   Result.tryCatch("MyExnName", () => {
+     *   Result.try("MyExnName", () => {
      *     if (true) throw new Error("oh no")
      *     else return 1;
      *   });
@@ -117,27 +56,26 @@ abstract class ResultImpl<A = never, E = never> {
      * expect(a.unwrapErr().kind).toEqual("MyExnName");
      * expect(a.unwrapErr().message).toEqual("oh no");
      *
-     * const b = Result.tryCatch("Panic!", () => { throw "oops" });
+     * const b = Result.try("Panic!", () => { throw "oops" });
      * expect(b.unwrapErr()).toBeInstanceOf(Error);
      * expect(b.unwrapErr().kind).toEqual("Panic!");
      * expect(b.unwrapErr().message).toEqual("oops");
      */
-    static tryCatch<A, T extends string>(
-        kind: T,
-        fn: () => A
-    ): Result<A, Exn<T>>;
-    static tryCatch<A, T extends string, E>(
-        kind: T,
-        fn: () => Result<A, E> | A
-    ): Result<A, Exn<T>> {
+    static try<A, T extends string>(kind: T, fn: () => A): Result<A, Exn<T>>;
+    static try<A, T extends string>(
+        arg1: (() => A) | T,
+        arg2?: () => A
+    ): Result<A, Error> | Result<A, Exn<T>> {
+        const returnExn = typeof arg1 === "string";
+        const fn = returnExn ? arg2 : arg1;
+
         try {
-            const x = fn();
-            return (x instanceof ResultImpl ? x : Ok(x)) as any;
+            return Ok(fn!());
         } catch (e) {
             const error = e instanceof Error ? e : new Error(stringify(e));
-            const exn = Exn(kind, error);
+            const err = returnExn ? Exn(arg1, error) : error;
 
-            return Err(exn, error.stack);
+            return Err(err, error.stack);
         }
     }
 
@@ -175,20 +113,18 @@ abstract class ResultImpl<A = never, E = never> {
     }
 
     /**
-     * `transposePromise: Result<Promise<A>, E> -> AsyncResult<A, E>`
+     * `transposePromise: Result<Promise<A>, E> -> Task<A, E>`
      *
      * ---
-     * Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
+     * Tranposes a `Result<Promise<A>, E>` into a `Task<A, E>`.
      * @example
      * declare getPokemon(id: number): Promise<Pokemon>;
      * declare parseId(str: string): Result<number, string>;
      *
      * const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
-     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+     * const y: Task<Pokemon, string> = Result.transposePromise(x);
      */
-    static transposePromise<A, E>(
-        rp: Result<Promise<A>, E>
-    ): AsyncResult<A, E> {
+    static transposePromise<A, E>(rp: Result<Promise<A>, E>): Task<A, E> {
         return rp.collectPromise(x => x);
     }
 
@@ -618,14 +554,14 @@ abstract class ResultImpl<A = never, E = never> {
     /**
      * `this: Result<A, E>`
      *
-     * `toAsyncResult: () -> AsyncResult<A, E>`
+     * `toTask: () -> Task<A, E>`
      *
      * ---
-     * Converts a `Result` into a `AsyncResult`.
+     * Converts a `Result` into a `Task`.
      * @example
-     * const a = Ok(5).toAsyncResult();
+     * const a = Ok(5).toTask();
      */
-    abstract toAsyncResult(): AsyncResult<A, E>;
+    abstract toTask(): Task<A, E>;
 
     /**
      * `this: Result<A, E>`
@@ -767,17 +703,17 @@ abstract class ResultImpl<A = never, E = never> {
     /**
      * `this: Result<A, E>`
      *
-     * `collectPromise: (A -> Promise<B>) -> AsyncResult<B, E>`
+     * `collectPromise: (A -> Promise<B>) -> Task<B, E>`
      *
      * ---
      * Given a `Promise` returning callback, executes it if `this` is `Ok`.
-     * @returns the inner value of the `Promise` wrapped in a `AsyncResult`.
+     * @returns the inner value of the `Promise` wrapped in a `Task`.
      * @example
      * const res = Ok("ditto").collectPromise(pokemon =>
      *   fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
      * );
      */
-    abstract collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E>;
+    abstract collectPromise<B>(fn: (a: A) => Promise<B>): Task<B, E>;
 
     /**
      * `this: Result<A, E>`
@@ -957,8 +893,8 @@ class OkImpl<A, E = never> extends ResultImpl<A, E> {
         return [];
     }
 
-    toAsyncResult(): AsyncResult<A, E> {
-        return AsyncResult.fromResult(this) as any;
+    toTask(): Task<A, E> {
+        return Task.fromResult(this) as any;
     }
 
     and<B, F>(r: Result<B, F>): Result<[A, B], E | F> {
@@ -1003,8 +939,8 @@ class OkImpl<A, E = never> extends ResultImpl<A, E> {
         return this;
     }
 
-    collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
-        return AsyncResult.from(fn(this.val).then(Ok));
+    collectPromise<B>(fn: (a: A) => Promise<B>): Task<B, E> {
+        return Task.from(fn(this.val).then(Ok));
     }
 
     collectNullable<B>(
@@ -1201,8 +1137,8 @@ class ErrImpl<A = never, E = never> extends ResultImpl<A, E> {
         return [this.err];
     }
 
-    toAsyncResult(): AsyncResult<A, E> {
-        return AsyncResult.fromResult(this) as any;
+    toTask(): Task<A, E> {
+        return Task.fromResult(this) as any;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1239,8 +1175,8 @@ class ErrImpl<A = never, E = never> extends ResultImpl<A, E> {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
-        return AsyncResult.fromResult(this) as any;
+    collectPromise<B>(fn: (a: A) => Promise<B>): Task<B, E> {
+        return Task.fromResult(this) as any;
     }
 
     collectNullable<B>(

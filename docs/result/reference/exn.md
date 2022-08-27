@@ -30,12 +30,12 @@ const coolFunction = (): Result<number, Exn<"ParsingError">> => {
 }
 ```
 
-You can alternatively also use `Result::tryCatch` and `AsyncResult::tryCatch` to avoid writing boilerplate.
+You can alternatively also use `Result::try` and `Task::try` to avoid writing boilerplate.
 
 #### example
 ```ts
   const foo: Result<number, Exn<"ParsingError">> = 
-    Result.tryCatch("ParsingError", () => parseNumberOrThrow("5"));
+    Result.try("ParsingError", () => parseNumberOrThrow("5"));
 ```
 
 This can be particularly helpful when dealing with multiple error types.

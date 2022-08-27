@@ -8,158 +8,90 @@ const stringify = (x: unknown) =>
     typeof x === "string" ? x : JSON.stringify(x, undefined, 2);
 
 /**
- * `AsyncResult<A, E>` is the type used for returning and propagating asynchronous errors.
+ * `Task<A, E>` is the type used for returning and propagating asynchronous errors.
  * It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
  *
- * `AsyncResult` implements `PromiseLike`, so it can always be awaited.
+ * `Task` implements `PromiseLike`, so it can always be awaited.
  */
-export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
+export class Task<A, E> implements PromiseLike<Result<A, E>> {
     private constructor(readonly inner: Promise<Result<A, E>>) {}
 
     /**
-     * `from: Promise<Result<A, E>> -> AsyncResult<A, E>`
+     * `from: Promise<Result<A, E>> -> Task<A, E>`
      *
      * ---
-     * Creates a `AsyncResult<A, E>` from a `Promise<Result<A, E>>`
+     * Creates a `Task<A, E>` from a `Promise<Result<A, E>>`
      * @example
      * const x = Promise.resolve(Ok(3));
-     * const y = AsyncResult.from(x);
+     * const y = Task.from(x);
      */
-    static from<A, E>(promiseResult: Promise<Result<A, E>>): AsyncResult<A, E> {
-        return new AsyncResult(promiseResult);
+    static from<A, E>(promiseResult: Promise<Result<A, E>>): Task<A, E> {
+        return new Task(promiseResult);
     }
 
     /**
-     * `fromPromise: Promise<A> -> AsyncResult<A, E>`
+     * `fromPromise: Promise<A> -> Task<A, E>`
      *
      * ---
-     * Creates a `AsyncResult<A, E>` from a `Promise<A>`
+     * Creates a `Task<A, E>` from a `Promise<A>`
      * @example
      * const x = Promise.resolve(3);
      *
-     * const y = AsyncResult.fromPromise(x);
+     * const y = Task.fromPromise(x);
      * expect(await y.isOk()).toBe(true);
      * expecy(await y.unwrap()).toEqual(3);
      */
-    static fromPromise<A, E = never>(promise: Promise<A>): AsyncResult<A, E> {
-        return new AsyncResult(promise.then(Ok));
+    static fromPromise<A, E = never>(promise: Promise<A>): Task<A, E> {
+        return new Task(promise.then(Ok));
     }
 
     /**
-     * `fromResult: Result<A, E> -> AsyncResult<A, E>`
+     * `fromResult: Result<A, E> -> Task<A, E>`
      *
      * ---
-     * Creates a `AsyncResult<A, E>` from a `Result<A, E>`
+     * Creates a `Task<A, E>` from a `Result<A, E>`
      * @example
      * const x = Ok(3);
      *
-     * const y = AsyncResult.fromResult(x);
+     * const y = Task.fromResult(x);
      * expecy(await y.unwrap()).toEqual(3);
      */
-    static fromResult<A, E>(result: Result<A, E>): AsyncResult<A, E> {
-        return new AsyncResult(Promise.resolve(result));
+    static fromResult<A, E>(result: Result<A, E>): Task<A, E> {
+        return new Task(Promise.resolve(result));
     }
 
     /**
-     * `try: (() -> Promise<A, E>) -> AsyncResult<A, Error | E>`
+     * `try: (() -> Promise<A>) -> Task<A, Error>`
      *
      * ---
-     * Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
+     * Catches a function that might throw, adding a stack trace to the returning `Task`.
      *
      * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
      *
      * @example
-     * const a: AsyncResult<number, Error | string> =
-     *   AsyncResult.try(async () => {
-     *     const x = throwIftrue(true);
-     *     if (x) return Ok(1);
-     *     else return Err("CustomError");
-     *   });
-     * expect((await a.unwrapErr())).toBeInstanceOf(Error);
-     *
-     * const b = AsyncResult.try(async () => { throw "oops" });
-     * expect((await b.unwrapErr())).toBeInstanceOf(Error);
-     * expect((await b.unwrapErr()).message).toEqual("oops");
-     */
-    static try<A, E>(
-        fn: () => Promise<Result<A, E>>
-    ): AsyncResult<A, Error | E>;
-    /**
-     * `try: (() -> Promise<A>) -> AsyncResult<A, Error>`
-     *
-     * ---
-     * Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
-     *
-     * @example
-     * const a: AsyncResult<number, Error> =
-     *   AsyncResult.try(async () => {
+     * const a: Task<number, Error> =
+     *   Task.try(async () => {
      *     if (true) throw new Error("oh no")
      *     else return 1;
      *   });
      * expect((await a.unwrapErr())).toBeInstanceOf(Error);
      *
-     * const b = AsyncResult.try(async () => { throw "oops" });
+     * const b = Task.try(async () => { throw "oops" });
      * expect((await b.unwrapErr())).toBeInstanceOf(Error);
      * expect((await b.unwrapErr()).message).toEqual("oops");
      */
-    static try<A>(fn: () => Promise<A>): AsyncResult<A, Error>;
-    static try<A, E>(
-        fn: () => Promise<Result<A, E> | A>
-    ): AsyncResult<A, Error | E> {
-        const x: Promise<Result<A, Error>> = fn()
-            .then(a => (a instanceof Result ? a : Ok(a)) as any)
-            .catch((e: unknown) => {
-                const error = e instanceof Error ? e : new Error(stringify(e));
-
-                return Err(error, error.stack);
-            });
-
-        return AsyncResult.from(x);
-    }
-
+    static try<A>(fn: () => Promise<A>): Task<A, Error>;
     /**
-     * `tryCatch: (T extends string, () -> Promise<Result<A, E>>) -> AsyncResult<A, Exn<T>>`
+     * `try: (T extends string, () -> Promise<A>) -> Task<A, Exn<T>>`
      *
      * ---
-     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
+     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Task`.
      *
      * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
      *
      * @example
-     * const a: AsyncResult<number, Exn<"MyExnName"> | string> =
-     *   AsyncResult.tryCatch("MyExnName", async () => {
-     *     const x = throwIfTrue(true);
-     *     if (x) return Ok(1);
-     *     else return Err("CustomError");
-     *   });
-     * const x = await a.unwrapErr();
-     * expect(x).toBeInstanceOf(Error);
-     * expect(x.kind).toEqual("MyExnName");
-     * expect(x.message).toEqual("oh no");
-     *
-     * const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
-     * const y = await b.unwrapErr();
-     * expect(y).toBeInstanceOf(Error);
-     * expect(y.kind).toEqual("Panic!");
-     * expect(y.message).toEqual("oops");
-     */
-    static tryCatch<A, T extends string, E>(
-        kind: T,
-        fn: () => Promise<Result<A, E>>
-    ): AsyncResult<A, Exn<T> | E>;
-    /**
-     * `tryCatch: (T extends string, () -> Promise<A>) -> AsyncResult<A, Exn<T>>`
-     *
-     * ---
-     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
-     *
-     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
-     *
-     * @example
-     * const a: AsyncResult<number, Exn<"MyExnName">> =
-     *   AsyncResult.tryCatch("MyExnName", async () => {
+     * const a: Task<number, Exn<"MyExnName">> =
+     *   Task.try("MyExnName", async () => {
      *     if (true) throw new Error("oh no")
      *     else return 1;
      *   });
@@ -168,43 +100,46 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * expect(x.kind).toEqual("MyExnName");
      * expect(x.message).toEqual("oh no");
      *
-     * const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
+     * const b = Task.try("Panic!", async () => { throw "oops" });
      * const y = await b.unwrapErr();
      * expect(y).toBeInstanceOf(Error);
      * expect(y.kind).toEqual("Panic!");
      * expect(y.message).toEqual("oops");
      */
-    static tryCatch<A, T extends string>(
+    static try<A, T extends string>(
         kind: T,
         fn: () => Promise<A>
-    ): AsyncResult<A, Exn<T>>;
-    static tryCatch<A, T extends string, E>(
-        kind: T,
-        fn: () => Promise<Result<A, E> | A>
-    ): AsyncResult<A, Exn<T> | E> {
-        const x: Promise<Result<A, Exn<T>>> = fn()
-            .then(a => (a instanceof Result ? a : Ok(a)) as any)
+    ): Task<A, Exn<T>>;
+    static try<A, T extends string>(
+        arg1: (() => Promise<A>) | T,
+        arg2?: () => Promise<A>
+    ): Task<A, Error> | Task<A, Exn<T>> {
+        const returnExn = typeof arg1 === "string";
+        const fn = returnExn ? arg2 : arg1;
+
+        const x: Promise<Result<A, Error>> = fn!()
+            .then(Ok)
             .catch((e: unknown) => {
                 const error = e instanceof Error ? e : new Error(stringify(e));
-                const exn = Exn(kind, error);
+                const err = returnExn ? Exn(arg1, error) : error;
 
-                return Err(exn, error.stack);
+                return Err(err, error.stack);
             });
 
-        return AsyncResult.from(x);
+        return Task.from(x);
     }
 
     /**
-     * `fn: (...args -> Promise<A>) -> (...args -> AsyncResult<A, Error>)`
+     * `fn: (...args -> Promise<A>) -> (...args -> Task<A, Error>)`
      *
      * ---
-     * Transforms a async function that might throw into a function that returns an `AsyncResult`.
+     * Transforms a async function that might throw into a function that returns an `Task`.
      *
      * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Error`.
      *
      * @example
      * const fun =
-     *   AsyncResult.fn(async (x: boolean) => {
+     *   Task.fn(async (x: boolean) => {
      *     if (x) throw new Error("oh no")
      *     else return 1;
      *   });
@@ -215,9 +150,9 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      */
     static fn<F extends (...args: any[]) => Promise<any>>(
         f: F
-    ): (...args: Parameters<F>) => AsyncResult<Awaited<ReturnType<F>>, Error> {
+    ): (...args: Parameters<F>) => Task<Awaited<ReturnType<F>>, Error> {
         return (...args: Parameters<F>) =>
-            AsyncResult.from(
+            Task.from(
                 f(...args)
                     .then(Ok)
                     .catch(e => {
@@ -238,17 +173,17 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
         return this.inner.then(onfulfilled, onrejected);
     }
 
-    *[Symbol.iterator](): Generator<YieldR<A, E, "AsyncResult">, A, any> {
+    *[Symbol.iterator](): Generator<YieldR<A, E, "Task">, A, any> {
         return yield this as any;
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `isOk: () -> Promise<boolean>`
      *
      * ---
-     * @returns `true` if the `AsyncResult<A, E>` is Ok.
+     * @returns `true` if the `Task<A, E>` is Ok.
      * @example
      * const val = AsyncOk(5);
      * expect(await val.isOk()).toBe(true);
@@ -258,12 +193,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `isOkWith: A -> Promise<boolean>`
      *
      * ---
-     * @returns `true` if the `AsyncResult<A, E>` is `Ok` and contains a value matching the predicate's return value.
+     * @returns `true` if the `Task<A, E>` is `Ok` and contains a value matching the predicate's return value.
      * @example
      * const val = AsyncOk(4);
      * expect(await val.isOkWith(x => x % 2 === 0)).toBe(true);
@@ -273,12 +208,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `isErr: () -> Promise<boolean>`
      *
      * ---
-     * @returns `true` if the `AsyncResult<A, E>` contains an Err.
+     * @returns `true` if the `Task<A, E>` contains an Err.
      * @example
      * const val = AsyncErr("oh no!");
      * expect(await val.isErr()).toBe(true);
@@ -288,12 +223,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `isErrWith: E -> Promise<boolean>`
      *
      * ---
-     * @returns `true` if the `AsyncResult<A, E>` is contains an `Err` matching the predicate.
+     * @returns `true` if the `Task<A, E>` is contains an `Err` matching the predicate.
      * @example
      * const val = Err("oh no!");
      * expect(val.isErrWith(x => x.length > 0)).toBe(true);
@@ -303,13 +238,13 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `unwrap: () -> Promise<A>`
      *
      * ---
      * @returns the contained Ok value.
-     * @throws if `AsyncResult<A, E>` is an Err.
+     * @throws if `Task<A, E>` is an Err.
      * @example
      * const x = AsyncOk(1);
      * expect(await x.unwrap()).toEqual(1);
@@ -322,7 +257,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `unwrapOr: A -> Promise<A>`
      *
@@ -340,7 +275,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `unwrapOrElse: (E -> A) -> Promise<A>`
      *
@@ -360,13 +295,13 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `unwrapErr: () -> E`
      *
      * ---
-     * @returns the `Err` value contained inside the `AsyncResult<A, E>`.
-     * @throws an Error if the `AsyncResult<A, E>` is `Ok`.
+     * @returns the `Err` value contained inside the `Task<A, E>`.
+     * @throws an Error if the `Task<A, E>` is `Ok`.
      * @example
      * const x = AsyncErr("oops");
      * expect(await x.unwrapErr()).toEqual("oops");
@@ -379,7 +314,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `expect: string -> Promise<A>`
      *
@@ -395,7 +330,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `expectErr: string -> Promise<E>`
      *
@@ -411,12 +346,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `trace: () -> AsyncResult<A, E>`
+     * `trace: () -> Task<A, E>`
      *
      * ---
-     * Adds a stack trace to the `AsyncResult` if it is an `Err`.
+     * Adds a stack trace to the `Task` if it is an `Err`.
      * @example
      * const a = AsyncOk(3);
      * expect(await a.stack()).toBeUndefined();
@@ -427,17 +362,17 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const c = AsyncErr("oh no").trace();
      * expect(await c.stack()).toBeDefined();
      */
-    trace(): AsyncResult<A, E> {
-        return AsyncResult.from(this.inner.then(x => x.trace()));
+    trace(): Task<A, E> {
+        return Task.from(this.inner.then(x => x.trace()));
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `stack: () -> Promise<string | undefined>`
      *
      * ---
-     * `Err` stack trace. Is only present if the `AsyncResult` is `Err` and has had the stack trace added to it with `.trace()`.
+     * `Err` stack trace. Is only present if the `Task` is `Err` and has had the stack trace added to it with `.trace()`.
      * @example
      * const a = AsyncOk(3);
      * expect(await a.stack()).toBeUndefined();
@@ -453,12 +388,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `map: (A -> B) -> AsyncResult<B, E>`
+     * `map: (A -> B) -> Task<B, E>`
      *
      * ---
-     * Evaluates the given function against the `A` value of `AsyncResult<A, E>` if it is `Ok`.
+     * Evaluates the given function against the `A` value of `Task<A, E>` if it is `Ok`.
      * @returns The resulting value of the mapping function wrapped in a `Result`.
      * @example
      * const x = AsyncOk(5).map(x => x * 2);
@@ -467,18 +402,18 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const y = AsyncErr("oops").map(x => x * 2);
      * expect(await y.unwrapErr()).toEqual("oops");
      */
-    map<B>(fn: (a: A) => B): AsyncResult<B, E> {
-        return AsyncResult.from(this.inner.then(x => x.map(fn)));
+    map<B>(fn: (a: A) => B): Task<B, E> {
+        return Task.from(this.inner.then(x => x.map(fn)));
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `mapErr: (E -> F) -> AsyncResult<A, F>`
+     * `mapErr: (E -> F) -> Task<A, F>`
      *
      * ---
-     * Evaluates the given function against the `E` value of `AsyncResult<A, E>` if it is an `Err`.
-     * @returns The resulting value of the mapping function wrapped in a `AsyncResult`.
+     * Evaluates the given function against the `E` value of `Task<A, E>` if it is an `Err`.
+     * @returns The resulting value of the mapping function wrapped in a `Task`.
      * @example
      * const x = AsyncErr(5).mapErr(x => x * 2);
      * expect(await x.unwrapErr()).toEqual(10);
@@ -486,12 +421,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const y = AsyncOk("foo").mapErr(x => x * 2);
      * expect(await y.unwrap()).toEqual("foo");
      */
-    mapErr<F>(fn: (a: E) => F): AsyncResult<A, F> {
-        return AsyncResult.from(this.inner.then(x => x.mapErr(fn)));
+    mapErr<F>(fn: (a: E) => F): Task<A, F> {
+        return Task.from(this.inner.then(x => x.mapErr(fn)));
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `mapOr: (B, A -> B) -> Promise<B>`
      *
@@ -509,7 +444,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `mapOrElse: (E -> B, A -> B) -> Promise<B>`
      *
@@ -536,13 +471,13 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `andThen: (A -> AsyncResult<B, F>) -> AsyncResult<B, E | F>`
+     * `andThen: (A -> Task<B, F>) -> Task<B, E | F>`
      *
      * ---
-     * Evaluates the given function against the `Ok` value of `AsyncResult<A, E>` if it is `Ok`.
-     * @returns The resulting value of the given function if the AsyncResult was `Ok`.
+     * Evaluates the given function against the `Ok` value of `Task<A, E>` if it is `Ok`.
+     * @returns The resulting value of the given function if the Task was `Ok`.
      * @example
      * const x = AsyncOk(5).andThen(x => AsyncOk(x * 2));
      * expect(await x.unwrap()).toEqual(10);
@@ -550,22 +485,22 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const y = AsyncErr("oops").andThen(x => AsyncOk(x * 2));
      * expect(await y.unwrapErr()).toEqual("oops");
      */
-    andThen<B, F>(fn: (a: A) => AsyncResult<B, F>): AsyncResult<B, E | F> {
+    andThen<B, F>(fn: (a: A) => Task<B, F>): Task<B, E | F> {
         const prom = this.inner.then(async v => {
             const result = await v.map(fn).collectPromise(x => x.inner);
             return Result.flatten(result);
         });
 
-        return AsyncResult.from(prom);
+        return Task.from(prom);
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `forEach: A -> Promise<void>`
      *
      * ---
-     * Executes a function against wrapped `Ok` value if the `AsyncResult` is `Ok`.
+     * Executes a function against wrapped `Ok` value if the `Task` is `Ok`.
      * @example
      * let x = 0;
      * await AsyncOk(5).forEach(n => (x = n));
@@ -577,12 +512,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `forEachErr: E -> Promise<void>`
      *
      * ---
-     * Executes a function against wrapped `Err` value if the `AsyncResult` is an `Err`.
+     * Executes a function against wrapped `Err` value if the `Task` is an `Err`.
      * @example
      * let x = 0;
      * await AsyncErr(5).forEachErr(n => (x = n));
@@ -594,29 +529,29 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `to: (AsyncResult<A, E> -> B) -> B`
+     * `to: (Task<A, E> -> B) -> B`
      *
      * ---
-     * Pipes this current `AsyncResult` instance as an argument to the given function.
+     * Pipes this current `Task` instance as an argument to the given function.
      * @example
      * const a = await AsyncOk("3")
      *   .to(async x => Number(await x.unwrap()));
      *
      * expect(a).toEqual(3);
      */
-    to<B>(fn: (a: AsyncResult<A, E>) => B): B {
+    to<B>(fn: (a: Task<A, E>) => B): B {
         return fn(this);
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `toArray: () -> Promise<A[]>`
      *
      * ---
-     * @returns a `A[]` with one element if the `AsyncResult<A, E>` is `Ok`. Otherwise returns an empty `A[]`.
+     * @returns a `A[]` with one element if the `Task<A, E>` is `Ok`. Otherwise returns an empty `A[]`.
      * @example
      * const x = await AsyncOk(5).toArray();
      * expect(x).toEqual([5]);
@@ -629,12 +564,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `toErrArray: () -> Promise<E[]>`
      *
      * ---
-     * @returns a `E[]` with one element if the `AsyncResult<A, E>` is `Err`. Otherwise returns an empty `E[]`.
+     * @returns a `E[]` with one element if the `Task<A, E>` is `Err`. Otherwise returns an empty `E[]`.
      * @example
      * const x = await AsyncErr("oops").toErrArray();
      * expect(x).toEqual(["oops"])
@@ -647,12 +582,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `and: AsyncResult<B, F> -> AsyncResult<A * B, E | F>`
+     * `and: Task<B, F> -> Task<A * B, E | F>`
      *
      * ---
-     * @returns the tupled values of the two `AsyncResult`s if they are all `Ok`, otherwise returns this `Err` or the param `Err`.
+     * @returns the tupled values of the two `Task`s if they are all `Ok`, otherwise returns this `Err` or the param `Err`.
      * @example
      * const x = AsyncOk("hello").and(AsyncOk(10));
      * expect(await x.unwrap()).toEqual(["hello", 10]);
@@ -663,7 +598,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const z = AsyncOk(1).and(AsyncErr("fatal"));
      * expect(await z.unwrapErr()).toEqual("fatal");
      */
-    and<B, F>(r: AsyncResult<B, F>): AsyncResult<[A, B], E | F> {
+    and<B, F>(r: Task<B, F>): Task<[A, B], E | F> {
         const prom = this.inner.then(async a => {
             if (a.isOk()) {
                 const b = await r;
@@ -677,16 +612,16 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
             return a;
         });
 
-        return AsyncResult.from(prom as any) as any;
+        return Task.from(prom as any) as any;
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `or: AsyncResult<A, F> -> AsyncResult<A, E | F>`
+     * `or: Task<A, F> -> Task<A, E | F>`
      *
      * ---
-     * @returns the arg `AsyncResult` if `this` is `Err`, otherwise returns `this`.
+     * @returns the arg `Task` if `this` is `Err`, otherwise returns `this`.
      * @example
      * const a = AsyncOk(2);
      * const b = AsyncErr("later error");
@@ -704,7 +639,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const y = AsyncOk(100);
      * expect(await x.or(y).unwrap()).toEqual(2);
      */
-    or<F>(r: AsyncResult<A, F>): AsyncResult<A, E | F> {
+    or<F>(r: Task<A, F>): Task<A, E | F> {
         const prom: Promise<Result<A, E | F>> = this.inner.then(async a => {
             if (a.isOk()) {
                 return a;
@@ -713,16 +648,16 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
             return r;
         });
 
-        return AsyncResult.from(prom);
+        return Task.from(prom);
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `orElse: (E -> AsyncResult<A, F>) -> AsyncResult<A, E | F>`
+     * `orElse: (E -> Task<A, F>) -> Task<A, E | F>`
      *
      * ---
-     * @returns return value from the given callback if `this` `AsyncResult` is `Err`, otherwise returns `this`.
+     * @returns return value from the given callback if `this` `Task` is `Err`, otherwise returns `this`.
      * @example
      * const a = AsyncOk(2);
      * const b = (x: number) => AsyncErr(x * 2);
@@ -740,7 +675,7 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * const y = (x: number) => AsyncOk(x * 100);
      * expect(async x.or(y).unwrap()).toEqual(3);
      */
-    orElse<F>(fn: (e: E) => AsyncResult<A, F>): AsyncResult<A, E | F> {
+    orElse<F>(fn: (e: E) => Task<A, F>): Task<A, E | F> {
         const prom: Promise<Result<A, E | F>> = this.inner.then(async a => {
             if (a.isOk()) {
                 return a;
@@ -749,16 +684,16 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
             return fn(a.unwrapErr());
         });
 
-        return AsyncResult.from(prom);
+        return Task.from(prom);
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `contains: A -> Promise<boolean>`
      *
      * ---
-     * @returns `true` if the AsyncResult is an `Ok` value containing the given value.
+     * @returns `true` if the Task is an `Ok` value containing the given value.
      * @example
      * const x = AsyncOk(2);
      * expect(await x.contains(2)).toBe(true);
@@ -771,12 +706,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
      * `containsErr: E -> Promise<boolean>`
      *
      * ---
-     * @returns `true` if the AsyncResult is an `Err` value containing the given value.
+     * @returns `true` if the Task is an `Err` value containing the given value.
      * @example
      * const x = AsyncErr("oh no");
      * expect(await x.containsErr("oh no")).toBe(true);
@@ -789,58 +724,58 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `inspect: (A -> void) -> AsyncResult<A, E>`
+     * `inspect: (A -> void) -> Task<A, E>`
      *
      * ---
-     * Calls the given function if the `AsyncResult` is `Ok`.
-     * @returns the original unmodified `AsyncResult`.
+     * Calls the given function if the `Task` is `Ok`.
+     * @returns the original unmodified `Task`.
      * @example
-     * const x: AsyncResult<number, string> = AsyncOk(5).inspect(console.log);
+     * const x: Task<number, string> = AsyncOk(5).inspect(console.log);
      * expect(await x.unwrap()).toEqual(5); // prints 5
      *
-     * const y: AsyncResult<number, string> = AsyncErr("oops").inspect(console.log);
+     * const y: Task<number, string> = AsyncErr("oops").inspect(console.log);
      * expect(await y.unwrapErr()).toEqual("oops"); // doesn't print
      */
-    inspect(fn: (a: A) => void): AsyncResult<A, E> {
-        return AsyncResult.from(this.inner.then(x => x.inspect(fn)));
+    inspect(fn: (a: A) => void): Task<A, E> {
+        return Task.from(this.inner.then(x => x.inspect(fn)));
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `inspectErr: (E -> void) -> AsyncResult<A, E>`
+     * `inspectErr: (E -> void) -> Task<A, E>`
      *
      * ---
-     * Calls the given function if the `AsyncResult` is `Err`.
-     * @returns the original unmodified `AsyncResult`.
+     * Calls the given function if the `Task` is `Err`.
+     * @returns the original unmodified `Task`.
      * @example
-     * const x: AsyncResult<number, string> = AsyncOk(5).inspectErr(console.log);
+     * const x: Task<number, string> = AsyncOk(5).inspectErr(console.log);
      * expect(await x.unwrap()).toEqual(5); // doesn't print
      *
-     * const y: AsyncResult<number, string> = AsyncErr("oops").inspectErr(console.log);
+     * const y: Task<number, string> = AsyncErr("oops").inspectErr(console.log);
      * expect(await y.unwrapErr()).toEqual("oops"); // prints "oops"
      */
-    inspectErr(fn: (e: E) => void): AsyncResult<A, E> {
-        return AsyncResult.from(this.inner.then(x => x.inspectErr(fn)));
+    inspectErr(fn: (e: E) => void): Task<A, E> {
+        return Task.from(this.inner.then(x => x.inspectErr(fn)));
     }
 
     /**
-     * `this: AsyncResult<A, E>`
+     * `this: Task<A, E>`
      *
-     * `collectPromise: (A -> Promise<B>) -> AsyncResult<B, E>`
+     * `collectPromise: (A -> Promise<B>) -> Task<B, E>`
      *
      * ---
      * Given a `Promise` returning callback, executes it if `this` is `Ok`.
-     * @returns the inner value of the `Promise` wrapped in a `AsyncResult`.
+     * @returns the inner value of the `Promise` wrapped in a `Task`.
      * @example
      * const res = AsyncOk("ditto").collectPromise(pokemon =>
      *   fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
      * );
      */
-    collectPromise<B>(fn: (a: A) => Promise<B>): AsyncResult<B, E> {
-        return AsyncResult.from(
+    collectPromise<B>(fn: (a: A) => Promise<B>): Task<B, E> {
+        return Task.from(
             this.inner.then(async x => {
                 if (x.isErr()) {
                     return this as any;
@@ -852,59 +787,39 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `transposePromise: AsyncResult<Promise<A>, E> -> AsyncResult<A, E>`
+     * `transposePromise: Task<Promise<A>, E> -> Task<A, E>`
      *
      * ---
-     * Tranposes a `AsyncResult<Promise<A>, E>` into a `AsyncResult<A, E>`. 
+     * Tranposes a `Task<Promise<A>, E>` into a `Task<A, E>`. 
      * @example
      * declare getPokemon(id: number): Promise<Pokemon>;
-     * declare parseId(str: string): AsyncResult<number, string>;
+     * declare parseId(str: string): Task<number, string>;
      *
-     * const x: AsyncResult<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
-     * const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+     * const x: Task<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
+     * const y: Task<Pokemon, string> = Result.transposePromise(x);
 
      */
-    static transposePromise = <A, E>(
-        rp: AsyncResult<Promise<A>, E>
-    ): AsyncResult<A, E> => rp.collectPromise(x => x);
+    static transposePromise = <A, E>(rp: Task<Promise<A>, E>): Task<A, E> =>
+        rp.collectPromise(x => x);
 
     /**
-     * `flatten: AsyncResult<AsyncResult<A, E>, F> -> AsyncResult<A, E | F>`
+     * `flatten: Task<Task<A, E>, F> -> Task<A, E | F>`
      *
      * ---
-     * Converts from `AsyncResult<AsyncResult<A, E>, F>` to `AsyncResult<A, E | F>`.
+     * Converts from `Task<Task<A, E>, F>` to `Task<A, E | F>`.
      * @example
-     * const x = AsyncResult.flatten(AsyncOk(AsyncOk(3)));
+     * const x = Task.flatten(AsyncOk(AsyncOk(3)));
      * expect(await x.unwrap()).toEqual(3);
      *
-     * const y = AsyncResult.flatten(AsyncOk(AsyncErr("oops")));
+     * const y = Task.flatten(AsyncOk(AsyncErr("oops")));
      * expect(await y.unwrapErr()).toEqual("oops");
      */
-    static flatten = <A, E, F>(
-        r: AsyncResult<AsyncResult<A, E>, F>
-    ): AsyncResult<A, E | F> => r.andThen(x => x);
+    static flatten = <A, E, F>(r: Task<Task<A, E>, F>): Task<A, E | F> =>
+        r.andThen(x => x);
 }
 
 /**
- * `Async: A -> Promise<A>`
- *
- * ---
- * An alias to `Promise.resolve`.
- * @returns the value given wrapped in a `Promise`.
- * @example
- * const a = Promise.resolve(5);
- * const b = Async(5);
- *
- * expect(await a).toEqual(await b);
- */
-export const Async = async <A>(a: A): Promise<A> => a;
-/**
- * An Asynchronous computation. Alias to Promise.
- */
-export type Async<A> = Promise<A>;
-
-/**
- * `AsyncOk: A -> AsyncResult<A, E>`
+ * `AsyncOk: A -> Task<A, E>`
  *
  * ---
  * @returns a `AsyncOk<A, E>` that represents an asynchronous success.
@@ -913,45 +828,45 @@ export type Async<A> = Promise<A>;
  *
  * expect(await x.isOk()).toBe(true
  */
-export const AsyncOk = <A = never, E = never>(a: A): AsyncResult<A, E> =>
-    AsyncResult.fromResult(Ok(a));
-export type AsyncOk<A, E = never> = AsyncResult<A, E>;
+export const AsyncOk = <A = never, E = never>(a: A): Task<A, E> =>
+    Task.fromResult(Ok(a));
+export type AsyncOk<A, E = never> = Task<A, E>;
 
 /**
- * `AsyncErr: E -> AsyncResult<A, E>`
+ * `AsyncErr: E -> Task<A, E>`
  *
  * ---
- * @returns a `AsyncResult<A, E>` that represents an asynchronous error.
+ * @returns a `Task<A, E>` that represents an asynchronous error.
  * @example
  * const x = AsyncErr("oops");
  *
  * expect(await x.isErr()).toBe(true)
  */
-export const AsyncErr = <A = never, E = never>(e: E): AsyncResult<A, E> =>
-    AsyncResult.fromResult(Err(e));
+export const AsyncErr = <A = never, E = never>(e: E): Task<A, E> =>
+    Task.fromResult(Err(e));
 
-export type AsyncErr<E, A = never> = AsyncResult<A, E>;
+export type AsyncErr<E, A = never> = Task<A, E>;
 
 /**
- * `asyncResult: Error Propagation`
+ * `task: Error Propagation`
  *
  * ---
  *
  * Allows awaiting async operations and propagation of errors using the `yield*` keyword.
- * The `yield*` keyword when called will only continue the further exection of the function if the `AsyncResult` is `Ok`. If the `AsyncResult` is `Err`, the `yield*` forces the function to return early with the `Err` value.
- * `asyncResult` blocks work a bit differently than `result` blocks. Here you can also `yield*` the following:
+ * The `yield*` keyword when called will only continue the further exection of the function if the `Task` is `Ok`. If the `Task` is `Err`, the `yield*` forces the function to return early with the `Err` value.
+ * `task` blocks work a bit differently than `result` blocks. Here you can also `yield*` the following:
  * - `Promise`: `yield*` will await the `Promise`.
  * - `Result`: `yield*` returns early if the `Result` is `Err`, otherwise extracts the `Ok` value.
- * - `AsyncResult`: `yield*` awaits the `AsyncResult` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
+ * - `Task`: `yield*` awaits the `Task` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
  * - `Promise<Result>`: `yield*` awaits the `Promise` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
  * @example
  * declare function getQueryParam(query: string): Promise<Result<string, QueryErr>>;
  * declare function parseId(str: string): Result<number, ParseErr>;
- * declare function findUser(id: int): AsyncResult<user, UserNotFoundErr>;
+ * declare function findUser(id: int): Task<user, UserNotFoundErr>;
  * declare function sendEmail(user: User): Promise<Response>;
  *
- * const x: AsyncResult<number, QueryErr | ParseErr | UserNotFoundErr> =
- *   asyncResult(function* () {
+ * const x: Task<number, QueryErr | ParseErr | UserNotFoundErr> =
+ *   task(function* () {
  *     const idParam: string = yield* getQueryParam("&id=5");
  *     const id: number = yield* parseId(idParam);
  *     const user: User = yield* findUser(id);
@@ -960,23 +875,23 @@ export type AsyncErr<E, A = never> = AsyncResult<A, E>;
  *     return response.status;
  *   });
  */
-export const asyncResult = <A, E, B, R extends YieldR<A, E>>(
+export const task = <A, E, B, R extends YieldR<A, E>>(
     genFn: () => Generator<R, B, A>
-): AsyncResult<B, R["err"]> => {
+): Task<B, R["err"]> => {
     const iterator = genFn();
     let state = iterator.next();
 
     function run(
         state: IteratorYieldResult<R> | IteratorReturnResult<B>
-    ): AsyncResult<A, E> {
+    ): Task<A, E> {
         if (state.done) {
             return AsyncOk(state.value) as any;
         }
 
         const { value } = state;
 
-        const normalize = (): AsyncResult<A, E> => {
-            if (value instanceof AsyncResult) return value;
+        const normalize = (): Task<A, E> => {
+            if (value instanceof Task) return value;
 
             if (value instanceof Promise) {
                 const prom = value as Promise<A | Result<A, E>>;
@@ -984,11 +899,10 @@ export const asyncResult = <A, E, B, R extends YieldR<A, E>>(
                     x instanceof Result ? x : Ok(x)
                 );
 
-                return AsyncResult.from(promRes);
+                return Task.from(promRes);
             }
 
-            if (value instanceof Result)
-                return AsyncResult.fromResult(value as any);
+            if (value instanceof Result) return Task.fromResult(value as any);
 
             throw new Error("Unrecognized yield* object");
         };

@@ -14,7 +14,7 @@ namespace DocGen {
             if (
                 header.name[0] === header.name[0]?.toUpperCase() ||
                 header.name === "result" ||
-                header.name === "asyncResult"
+                header.name === "task"
             )
                 return "module";
 
@@ -53,10 +53,7 @@ namespace DocGen {
         const params = str.map(line => {
             const param = line.split(" ").at(0);
 
-            return `\`${param}\` ${line
-                .split(" ")
-                .slice(1)
-                .join(" ")}`;
+            return `\`${param}\` ${line.split(" ").slice(1).join(" ")}`;
         });
 
         return ["##### params", ...params];
@@ -104,7 +101,7 @@ namespace DocGen {
             [
                 ...body.description,
                 ...returnsMd(body.returns),
-                ...throwsMd(body.throws)
+                ...throwsMd(body.throws),
             ].join("\n\n") +
             "\n" +
             exampleMd(body.example).join("\n");
@@ -125,7 +122,7 @@ namespace DocGen {
             ),
             ...unorderedDocs.filter(
                 x => FunctionType.fromHeader(x.header) === "instance"
-            )
+            ),
         ];
 
         if (orderedDocs.length === 0) {
@@ -133,10 +130,7 @@ namespace DocGen {
             return;
         }
 
-        const name = filePath
-            .split("/")
-            .at(-1)!
-            .replace(".ts", "");
+        const name = filePath.split("/").at(-1)!.replace(".ts", "");
 
         const template = path.join(out, `${name}${suffix}.md`);
 
@@ -173,8 +167,8 @@ const settings: DocGen.Settings[] = [
     {
         in: "../result/src",
         out: "../../docs/result/reference",
-        templateSuffix: "_template"
-    }
+        templateSuffix: "_template",
+    },
 ];
 
 console.log(__dirname);

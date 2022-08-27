@@ -1,8 +1,8 @@
-# AsyncResult
+# Task
 
-`AsyncResult<A, E>` is the type used for returning and propagating asynchronous errors. It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
+`Task<A, E>` is the type used for returning and propagating asynchronous errors. It can either be Ok, representing success and containing a value of type `A`, or an Err, representing an error and containing a value of type `E`.
 
-`AsyncResult` implements `PromiseLike`, so it can always be awaited.
+`Task` implements `PromiseLike`, so it can always be awaited, returning the underlying `Result`.
 
 > `function` functions without any prefix are loose functions imported directly from the module.
 >
@@ -11,26 +11,10 @@
 > `::function` functions starting with `::` are static functions.
 
 > ### Important!
-> `AsyncResult` returning functions must **always** specify their return value. If you forget to, *TypeScript* will infer the returng type incorrectly.
-## Async 
-
-<span class="sig">`A -> Promise<A>`</span>
-
-An alias to `Promise.resolve`.
-
-Returns the value given wrapped in a `Promise`.
-##### example
-
-```ts
-const a = Promise.resolve(5);
-const b = Async(5);
-
-expect(await a).toEqual(await b);
-
-```
+> `Task` returning functions should always specify their return value. If you forget to, *TypeScript* *can* infer the returng type incorrectly.
 ## AsyncOk 
 
-<span class="sig">`A -> AsyncResult<A, E>`</span>
+<span class="sig">`A -> Task<A, E>`</span>
 
 Returns a `AsyncOk<A, E>` that represents an asynchronous success.
 ##### example
@@ -43,9 +27,9 @@ expect(await x.isOk()).toBe(true
 ```
 ## AsyncErr 
 
-<span class="sig">`E -> AsyncResult<A, E>`</span>
+<span class="sig">`E -> Task<A, E>`</span>
 
-Returns a `AsyncResult<A, E>` that represents an asynchronous error.
+Returns a `Task<A, E>` that represents an asynchronous error.
 ##### example
 
 ```ts
@@ -54,21 +38,21 @@ const x = AsyncErr("oops");
 expect(await x.isErr()).toBe(true)
 
 ```
-## asyncResult 
+## task 
 
 <span class="sig">`Error Propagation`</span>
 
 Allows awaiting async operations and propagation of errors using the `yield*` keyword.
 
-The `yield*` keyword when called will only continue the further exection of the function if the `AsyncResult` is `Ok`. If the `AsyncResult` is `Err`, the `yield*` forces the function to return early with the `Err` value.
+The `yield*` keyword when called will only continue the further exection of the function if the `Task` is `Ok`. If the `Task` is `Err`, the `yield*` forces the function to return early with the `Err` value.
 
-`asyncResult` blocks work a bit differently than `result` blocks. Here you can also `yield*` the following:
+`task` blocks work a bit differently than `result` blocks. Here you can also `yield*` the following:
 
 - `Promise`: `yield*` will await the `Promise`.
 
 - `Result`: `yield*` returns early if the `Result` is `Err`, otherwise extracts the `Ok` value.
 
-- `AsyncResult`: `yield*` awaits the `AsyncResult` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
+- `Task`: `yield*` awaits the `Task` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
 
 - `Promise<Result>`: `yield*` awaits the `Promise` and returns early if the inner `Result` is `Err`, otherwise extracts the `Ok` value.
 ##### example
@@ -76,11 +60,11 @@ The `yield*` keyword when called will only continue the further exection of the 
 ```ts
 declare function getQueryParam(query: string): Promise<Result<string, QueryErr>>;
 declare function parseId(str: string): Result<number, ParseErr>;
-declare function findUser(id: int): AsyncResult<user, UserNotFoundErr>;
+declare function findUser(id: int): Task<user, UserNotFoundErr>;
 declare function sendEmail(user: User): Promise<Response>;
 
-const x: AsyncResult<number, QueryErr | ParseErr | UserNotFoundErr> =
-  asyncResult(function* () {
+const x: Task<number, QueryErr | ParseErr | UserNotFoundErr> =
+  task(function* () {
     const idParam: string = yield* getQueryParam("&id=5");
     const id: number = yield* parseId(idParam);
     const user: User = yield* findUser(id);
@@ -92,130 +76,79 @@ const x: AsyncResult<number, QueryErr | ParseErr | UserNotFoundErr> =
 ```
 ## ::from 
 
-<span class="sig">`Promise<Result<A, E>> -> AsyncResult<A, E>`</span>
+<span class="sig">`Promise<Result<A, E>> -> Task<A, E>`</span>
 
-Creates a `AsyncResult<A, E>` from a `Promise<Result<A, E>>`
+Creates a `Task<A, E>` from a `Promise<Result<A, E>>`
 ##### example
 
 ```ts
 const x = Promise.resolve(Ok(3));
-const y = AsyncResult.from(x);
+const y = Task.from(x);
 
 ```
 ## ::fromPromise 
 
-<span class="sig">`Promise<A> -> AsyncResult<A, E>`</span>
+<span class="sig">`Promise<A> -> Task<A, E>`</span>
 
-Creates a `AsyncResult<A, E>` from a `Promise<A>`
+Creates a `Task<A, E>` from a `Promise<A>`
 ##### example
 
 ```ts
 const x = Promise.resolve(3);
 
-const y = AsyncResult.fromPromise(x);
+const y = Task.fromPromise(x);
 expect(await y.isOk()).toBe(true);
 expecy(await y.unwrap()).toEqual(3);
 
 ```
 ## ::fromResult 
 
-<span class="sig">`Result<A, E> -> AsyncResult<A, E>`</span>
+<span class="sig">`Result<A, E> -> Task<A, E>`</span>
 
-Creates a `AsyncResult<A, E>` from a `Result<A, E>`
+Creates a `Task<A, E>` from a `Result<A, E>`
 ##### example
 
 ```ts
 const x = Ok(3);
 
-const y = AsyncResult.fromResult(x);
+const y = Task.fromResult(x);
 expecy(await y.unwrap()).toEqual(3);
 
 ```
 ## ::try 
 
-<span class="sig">`(() -> Promise<A, E>) -> AsyncResult<A, Error | E>`</span>
+<span class="sig">`(() -> Promise<A>) -> Task<A, Error>`</span>
 
-Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
+Catches a function that might throw, adding a stack trace to the returning `Task`.
 
 Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
 ##### example
 
 ```ts
-const a: AsyncResult<number, Error | string> =
-  AsyncResult.try(async () => {
-    const x = throwIftrue(true);
-    if (x) return Ok(1);
-    else return Err("CustomError");
+const a: Task<number, Error> =
+  Task.try(async () => {
+    if (true) throw new Error("oh no")
+    else return 1;
   });
 expect((await a.unwrapErr())).toBeInstanceOf(Error);
 
-const b = AsyncResult.try(async () => { throw "oops" });
+const b = Task.try(async () => { throw "oops" });
 expect((await b.unwrapErr())).toBeInstanceOf(Error);
 expect((await b.unwrapErr()).message).toEqual("oops");
 
 ```
 ## ::try 
 
-<span class="sig">`(() -> Promise<A>) -> AsyncResult<A, Error>`</span>
+<span class="sig">`(T extends string, () -> Promise<A>) -> Task<A, Exn<T>>`</span>
 
-Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
-
-Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
-##### example
-
-```ts
-const a: AsyncResult<number, Error> =
-  AsyncResult.try(async () => {
-    if (true) throw new Error("oh no")
-    else return 1;
-  });
-expect((await a.unwrapErr())).toBeInstanceOf(Error);
-
-const b = AsyncResult.try(async () => { throw "oops" });
-expect((await b.unwrapErr())).toBeInstanceOf(Error);
-expect((await b.unwrapErr()).message).toEqual("oops");
-
-```
-## ::tryCatch 
-
-<span class="sig">`(T extends string, () -> Promise<Result<A, E>>) -> AsyncResult<A, Exn<T>>`</span>
-
-Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
+Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Task`.
 
 Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
 ##### example
 
 ```ts
-const a: AsyncResult<number, Exn<"MyExnName"> | string> =
-  AsyncResult.tryCatch("MyExnName", async () => {
-    const x = throwIfTrue(true);
-    if (x) return Ok(1);
-    else return Err("CustomError");
-  });
-const x = await a.unwrapErr();
-expect(x).toBeInstanceOf(Error);
-expect(x.kind).toEqual("MyExnName");
-expect(x.message).toEqual("oh no");
-
-const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
-const y = await b.unwrapErr();
-expect(y).toBeInstanceOf(Error);
-expect(y.kind).toEqual("Panic!");
-expect(y.message).toEqual("oops");
-
-```
-## ::tryCatch 
-
-<span class="sig">`(T extends string, () -> Promise<A>) -> AsyncResult<A, Exn<T>>`</span>
-
-Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
-
-Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
-##### example
-
-```ts
-const a: AsyncResult<number, Exn<"MyExnName">> =
-  AsyncResult.tryCatch("MyExnName", async () => {
+const a: Task<number, Exn<"MyExnName">> =
+  Task.try("MyExnName", async () => {
     if (true) throw new Error("oh no")
     else return 1;
   });
@@ -224,7 +157,7 @@ expect(x).toBeInstanceOf(Error);
 expect(x.kind).toEqual("MyExnName");
 expect(x.message).toEqual("oh no");
 
-const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
+const b = Task.try("Panic!", async () => { throw "oops" });
 const y = await b.unwrapErr();
 expect(y).toBeInstanceOf(Error);
 expect(y.kind).toEqual("Panic!");
@@ -233,16 +166,16 @@ expect(y.message).toEqual("oops");
 ```
 ## ::fn 
 
-<span class="sig">`(...args -> Promise<A>) -> (...args -> AsyncResult<A, Error>)`</span>
+<span class="sig">`(...args -> Promise<A>) -> (...args -> Task<A, Error>)`</span>
 
-Transforms a async function that might throw into a function that returns an `AsyncResult`.
+Transforms a async function that might throw into a function that returns an `Task`.
 
 Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Error`.
 ##### example
 
 ```ts
 const fun =
-  AsyncResult.fn(async (x: boolean) => {
+  Task.fn(async (x: boolean) => {
     if (x) throw new Error("oh no")
     else return 1;
   });
@@ -254,31 +187,31 @@ expect(x.message).toEqual("oh no");
 ```
 ## ::transposePromise 
 
-<span class="sig">`AsyncResult<Promise<A>, E> -> AsyncResult<A, E>`</span>
+<span class="sig">`Task<Promise<A>, E> -> Task<A, E>`</span>
 
-Tranposes a `AsyncResult<Promise<A>, E>` into a `AsyncResult<A, E>`.
+Tranposes a `Task<Promise<A>, E>` into a `Task<A, E>`.
 ##### example
 
 ```ts
 declare getPokemon(id: number): Promise<Pokemon>;
-declare parseId(str: string): AsyncResult<number, string>;
+declare parseId(str: string): Task<number, string>;
 
-const x: AsyncResult<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
-const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+const x: Task<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
+const y: Task<Pokemon, string> = Result.transposePromise(x);
 
 ```
 ## ::flatten 
 
-<span class="sig">`AsyncResult<AsyncResult<A, E>, F> -> AsyncResult<A, E | F>`</span>
+<span class="sig">`Task<Task<A, E>, F> -> Task<A, E | F>`</span>
 
-Converts from `AsyncResult<AsyncResult<A, E>, F>` to `AsyncResult<A, E | F>`.
+Converts from `Task<Task<A, E>, F>` to `Task<A, E | F>`.
 ##### example
 
 ```ts
-const x = AsyncResult.flatten(AsyncOk(AsyncOk(3)));
+const x = Task.flatten(AsyncOk(AsyncOk(3)));
 expect(await x.unwrap()).toEqual(3);
 
-const y = AsyncResult.flatten(AsyncOk(AsyncErr("oops")));
+const y = Task.flatten(AsyncOk(AsyncErr("oops")));
 expect(await y.unwrapErr()).toEqual("oops");
 
 ```
@@ -286,7 +219,7 @@ expect(await y.unwrapErr()).toEqual("oops");
 
 <span class="sig">`() -> Promise<boolean>`</span>
 
-Returns `true` if the `AsyncResult<A, E>` is Ok.
+Returns `true` if the `Task<A, E>` is Ok.
 ##### example
 
 ```ts
@@ -298,7 +231,7 @@ expect(await val.isOk()).toBe(true);
 
 <span class="sig">`A -> Promise<boolean>`</span>
 
-Returns `true` if the `AsyncResult<A, E>` is `Ok` and contains a value matching the predicate's return value.
+Returns `true` if the `Task<A, E>` is `Ok` and contains a value matching the predicate's return value.
 ##### example
 
 ```ts
@@ -310,7 +243,7 @@ expect(await val.isOkWith(x => x % 2 === 0)).toBe(true);
 
 <span class="sig">`() -> Promise<boolean>`</span>
 
-Returns `true` if the `AsyncResult<A, E>` contains an Err.
+Returns `true` if the `Task<A, E>` contains an Err.
 ##### example
 
 ```ts
@@ -322,7 +255,7 @@ expect(await val.isErr()).toBe(true);
 
 <span class="sig">`E -> Promise<boolean>`</span>
 
-Returns `true` if the `AsyncResult<A, E>` is contains an `Err` matching the predicate.
+Returns `true` if the `Task<A, E>` is contains an `Err` matching the predicate.
 ##### example
 
 ```ts
@@ -338,7 +271,7 @@ Returns the contained Ok value.
 
 ##### throws
 
- if `AsyncResult<A, E>` is an Err.
+ if `Task<A, E>` is an Err.
 ##### example
 
 ```ts
@@ -385,11 +318,11 @@ expect(b).toEqual(3);
 
 <span class="sig">`() -> E`</span>
 
-Returns the `Err` value contained inside the `AsyncResult<A, E>`.
+Returns the `Err` value contained inside the `Task<A, E>`.
 
 ##### throws
 
- an Error if the `AsyncResult<A, E>` is `Ok`.
+ an Error if the `Task<A, E>` is `Ok`.
 ##### example
 
 ```ts
@@ -434,9 +367,9 @@ await x.expectErr("Testing expectErr"); // throws Error with message 'Testing ex
 ```
 ## .trace 
 
-<span class="sig">`() -> AsyncResult<A, E>`</span>
+<span class="sig">`() -> Task<A, E>`</span>
 
-Adds a stack trace to the `AsyncResult` if it is an `Err`.
+Adds a stack trace to the `Task` if it is an `Err`.
 ##### example
 
 ```ts
@@ -454,7 +387,7 @@ expect(await c.stack()).toBeDefined();
 
 <span class="sig">`() -> Promise<string | undefined>`</span>
 
-`Err` stack trace. Is only present if the `AsyncResult` is `Err` and has had the stack trace added to it with `.trace()`.
+`Err` stack trace. Is only present if the `Task` is `Err` and has had the stack trace added to it with `.trace()`.
 ##### example
 
 ```ts
@@ -470,9 +403,9 @@ expect(await c.stack()).toBeDefined();
 ```
 ## .map 
 
-<span class="sig">`(A -> B) -> AsyncResult<B, E>`</span>
+<span class="sig">`(A -> B) -> Task<B, E>`</span>
 
-Evaluates the given function against the `A` value of `AsyncResult<A, E>` if it is `Ok`.
+Evaluates the given function against the `A` value of `Task<A, E>` if it is `Ok`.
 
 Returns the resulting value of the mapping function wrapped in a `Result`.
 ##### example
@@ -487,11 +420,11 @@ expect(await y.unwrapErr()).toEqual("oops");
 ```
 ## .mapErr 
 
-<span class="sig">`(E -> F) -> AsyncResult<A, F>`</span>
+<span class="sig">`(E -> F) -> Task<A, F>`</span>
 
-Evaluates the given function against the `E` value of `AsyncResult<A, E>` if it is an `Err`.
+Evaluates the given function against the `E` value of `Task<A, E>` if it is an `Err`.
 
-Returns the resulting value of the mapping function wrapped in a `AsyncResult`.
+Returns the resulting value of the mapping function wrapped in a `Task`.
 ##### example
 
 ```ts
@@ -544,11 +477,11 @@ expect(y).toEqual(5);
 ```
 ## .andThen 
 
-<span class="sig">`(A -> AsyncResult<B, F>) -> AsyncResult<B, E | F>`</span>
+<span class="sig">`(A -> Task<B, F>) -> Task<B, E | F>`</span>
 
-Evaluates the given function against the `Ok` value of `AsyncResult<A, E>` if it is `Ok`.
+Evaluates the given function against the `Ok` value of `Task<A, E>` if it is `Ok`.
 
-Returns the resulting value of the given function if the AsyncResult was `Ok`.
+Returns the resulting value of the given function if the Task was `Ok`.
 ##### example
 
 ```ts
@@ -563,7 +496,7 @@ expect(await y.unwrapErr()).toEqual("oops");
 
 <span class="sig">`A -> Promise<void>`</span>
 
-Executes a function against wrapped `Ok` value if the `AsyncResult` is `Ok`.
+Executes a function against wrapped `Ok` value if the `Task` is `Ok`.
 ##### example
 
 ```ts
@@ -577,7 +510,7 @@ expect(x).toEqual(5);
 
 <span class="sig">`E -> Promise<void>`</span>
 
-Executes a function against wrapped `Err` value if the `AsyncResult` is an `Err`.
+Executes a function against wrapped `Err` value if the `Task` is an `Err`.
 ##### example
 
 ```ts
@@ -589,9 +522,9 @@ expect(x).toEqual(5);
 ```
 ## .to 
 
-<span class="sig">`(AsyncResult<A, E> -> B) -> B`</span>
+<span class="sig">`(Task<A, E> -> B) -> B`</span>
 
-Pipes this current `AsyncResult` instance as an argument to the given function.
+Pipes this current `Task` instance as an argument to the given function.
 ##### example
 
 ```ts
@@ -605,7 +538,7 @@ expect(a).toEqual(3);
 
 <span class="sig">`() -> Promise<A[]>`</span>
 
-Returns a `A[]` with one element if the `AsyncResult<A, E>` is `Ok`. Otherwise returns an empty `A[]`.
+Returns a `A[]` with one element if the `Task<A, E>` is `Ok`. Otherwise returns an empty `A[]`.
 ##### example
 
 ```ts
@@ -620,7 +553,7 @@ expect(y.length).toEqual(0);
 
 <span class="sig">`() -> Promise<E[]>`</span>
 
-Returns a `E[]` with one element if the `AsyncResult<A, E>` is `Err`. Otherwise returns an empty `E[]`.
+Returns a `E[]` with one element if the `Task<A, E>` is `Err`. Otherwise returns an empty `E[]`.
 ##### example
 
 ```ts
@@ -633,9 +566,9 @@ expect(y.length).toEqual(0);
 ```
 ## .and 
 
-<span class="sig">`AsyncResult<B, F> -> AsyncResult<A * B, E | F>`</span>
+<span class="sig">`Task<B, F> -> Task<A * B, E | F>`</span>
 
-Returns the tupled values of the two `AsyncResult`s if they are all `Ok`, otherwise returns this `Err` or the param `Err`.
+Returns the tupled values of the two `Task`s if they are all `Ok`, otherwise returns this `Err` or the param `Err`.
 ##### example
 
 ```ts
@@ -651,9 +584,9 @@ expect(await z.unwrapErr()).toEqual("fatal");
 ```
 ## .or 
 
-<span class="sig">`AsyncResult<A, F> -> AsyncResult<A, E | F>`</span>
+<span class="sig">`Task<A, F> -> Task<A, E | F>`</span>
 
-Returns the arg `AsyncResult` if `this` is `Err`, otherwise returns `this`.
+Returns the arg `Task` if `this` is `Err`, otherwise returns `this`.
 ##### example
 
 ```ts
@@ -676,9 +609,9 @@ expect(await x.or(y).unwrap()).toEqual(2);
 ```
 ## .orElse 
 
-<span class="sig">`(E -> AsyncResult<A, F>) -> AsyncResult<A, E | F>`</span>
+<span class="sig">`(E -> Task<A, F>) -> Task<A, E | F>`</span>
 
-Returns return value from the given callback if `this` `AsyncResult` is `Err`, otherwise returns `this`.
+Returns return value from the given callback if `this` `Task` is `Err`, otherwise returns `this`.
 ##### example
 
 ```ts
@@ -703,7 +636,7 @@ expect(async x.or(y).unwrap()).toEqual(3);
 
 <span class="sig">`A -> Promise<boolean>`</span>
 
-Returns `true` if the AsyncResult is an `Ok` value containing the given value.
+Returns `true` if the Task is an `Ok` value containing the given value.
 ##### example
 
 ```ts
@@ -718,7 +651,7 @@ expect(await x.contains(2)).toBe(false);
 
 <span class="sig">`E -> Promise<boolean>`</span>
 
-Returns `true` if the AsyncResult is an `Err` value containing the given value.
+Returns `true` if the Task is an `Err` value containing the given value.
 ##### example
 
 ```ts
@@ -731,45 +664,45 @@ expect(await x.containsErr("oops")).toBe(false);
 ```
 ## .inspect 
 
-<span class="sig">`(A -> void) -> AsyncResult<A, E>`</span>
+<span class="sig">`(A -> void) -> Task<A, E>`</span>
 
-Calls the given function if the `AsyncResult` is `Ok`.
+Calls the given function if the `Task` is `Ok`.
 
-Returns the original unmodified `AsyncResult`.
+Returns the original unmodified `Task`.
 ##### example
 
 ```ts
-const x: AsyncResult<number, string> = AsyncOk(5).inspect(console.log);
+const x: Task<number, string> = AsyncOk(5).inspect(console.log);
 expect(await x.unwrap()).toEqual(5); // prints 5
 
-const y: AsyncResult<number, string> = AsyncErr("oops").inspect(console.log);
+const y: Task<number, string> = AsyncErr("oops").inspect(console.log);
 expect(await y.unwrapErr()).toEqual("oops"); // doesn't print
 
 ```
 ## .inspectErr 
 
-<span class="sig">`(E -> void) -> AsyncResult<A, E>`</span>
+<span class="sig">`(E -> void) -> Task<A, E>`</span>
 
-Calls the given function if the `AsyncResult` is `Err`.
+Calls the given function if the `Task` is `Err`.
 
-Returns the original unmodified `AsyncResult`.
+Returns the original unmodified `Task`.
 ##### example
 
 ```ts
-const x: AsyncResult<number, string> = AsyncOk(5).inspectErr(console.log);
+const x: Task<number, string> = AsyncOk(5).inspectErr(console.log);
 expect(await x.unwrap()).toEqual(5); // doesn't print
 
-const y: AsyncResult<number, string> = AsyncErr("oops").inspectErr(console.log);
+const y: Task<number, string> = AsyncErr("oops").inspectErr(console.log);
 expect(await y.unwrapErr()).toEqual("oops"); // prints "oops"
 
 ```
 ## .collectPromise 
 
-<span class="sig">`(A -> Promise<B>) -> AsyncResult<B, E>`</span>
+<span class="sig">`(A -> Promise<B>) -> Task<B, E>`</span>
 
 Given a `Promise` returning callback, executes it if `this` is `Ok`.
 
-Returns the inner value of the `Promise` wrapped in a `AsyncResult`.
+Returns the inner value of the `Promise` wrapped in a `Task`.
 ##### example
 
 ```ts

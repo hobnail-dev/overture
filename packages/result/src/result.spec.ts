@@ -1,6 +1,5 @@
-import { unit } from ".";
-import { AsyncResult } from "./asyncResult";
 import { Err, Ok, Result, result } from "./result";
+import { Task } from "./task";
 
 describe("Result", () => {
     describe("Ok", () => {
@@ -27,86 +26,60 @@ describe("Result", () => {
     });
 
     describe("::try", () => {
-        it("Creates an Ok Result from a function that might throw but didn't", () => {
-            const x = Result.try(() => "didn't throw");
+        describe("Error", () => {
+            it("Creates an Ok Result from a function that might throw but didn't", () => {
+                const x = Result.try(() => "didn't throw");
 
-            expect(x.unwrap()).toEqual("didn't throw");
-        });
-
-        it("Creates an Ok Result from a function that might throw but instead returned an Ok", () => {
-            const x = Result.try(() => Ok("hello"));
-
-            expect(x.unwrap()).toEqual("hello");
-        });
-
-        it("Creates an Err Result from a function that might throw but instead returned an Err", () => {
-            const x = Result.try(() => Err("hello"));
-
-            expect(x.unwrapErr()).toEqual("hello");
-        });
-
-        it("Creates an Err Result with an Error from a function that throws", () => {
-            const x = Result.try(() => {
-                throw new Error("oh no");
-                return unit;
+                expect(x.unwrap()).toEqual("didn't throw");
             });
 
-            expect(x.unwrapErr().message).toEqual("oh no");
-            expect(x.unwrapErr()).toBeInstanceOf(Error);
-        });
+            it("Creates an Err Result with an Error from a function that throws", () => {
+                const x = Result.try(() => {
+                    throw new Error("oh no");
+                });
 
-        it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
-            const x = Result.try(() => {
-                // eslint-disable-next-line @typescript-eslint/no-throw-literal
-                throw "oops";
-                return unit;
+                expect(x.unwrapErr().message).toEqual("oh no");
+                expect(x.unwrapErr()).toBeInstanceOf(Error);
             });
 
-            expect(x.unwrapErr().message).toEqual("oops");
-            expect(x.unwrapErr()).toBeInstanceOf(Error);
-        });
-    });
+            it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
+                const x = Result.try(() => {
+                    // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                    throw "oops";
+                });
 
-    describe("::tryCatch", () => {
-        it("Creates an Ok Result from a function that might throw but didn't", () => {
-            const x = Result.tryCatch("something", () => "didn't throw");
-
-            expect(x.unwrap()).toEqual("didn't throw");
-        });
-
-        it("Creates an Ok Result from a function that might throw but instead returned an Ok", () => {
-            const x = Result.tryCatch("something", () => Ok("hello"));
-
-            expect(x.unwrap()).toEqual("hello");
+                expect(x.unwrapErr().message).toEqual("oops");
+                expect(x.unwrapErr()).toBeInstanceOf(Error);
+            });
         });
 
-        it("Creates an Err Result from a function that might throw but instead returned an Err", () => {
-            const x = Result.tryCatch("something", () => Err("hello"));
+        describe("Exn", () => {
+            it("Creates an Ok Result from a function that might throw but didn't", () => {
+                const x = Result.try("something", () => "didn't throw");
 
-            expect(x.unwrapErr()).toEqual("hello");
-        });
-
-        it("Creates an Err Result with an Error from a function that throws", () => {
-            const x = Result.tryCatch("OhNo", () => {
-                throw new Error("oh no");
-                return unit;
+                expect(x.unwrap()).toEqual("didn't throw");
             });
 
-            expect(x.unwrapErr().kind).toEqual("OhNo");
-            expect(x.unwrapErr().message).toEqual("oh no");
-            expect(x.unwrapErr()).toBeInstanceOf(Error);
-        });
+            it("Creates an Err Result with an Error from a function that throws", () => {
+                const x = Result.try("OhNo", () => {
+                    throw new Error("oh no");
+                });
 
-        it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
-            const x = Result.tryCatch("Oops", () => {
-                // eslint-disable-next-line @typescript-eslint/no-throw-literal
-                throw "oops";
-                return unit;
+                expect(x.unwrapErr().kind).toEqual("OhNo");
+                expect(x.unwrapErr().message).toEqual("oh no");
+                expect(x.unwrapErr()).toBeInstanceOf(Error);
             });
 
-            expect(x.unwrapErr().kind).toEqual("Oops");
-            expect(x.unwrapErr().message).toEqual("oops");
-            expect(x.unwrapErr()).toBeInstanceOf(Error);
+            it("Creates an Err Result with an Error from a function that throws a value other than an Error", () => {
+                const x = Result.try("Oops", () => {
+                    // eslint-disable-next-line @typescript-eslint/no-throw-literal
+                    throw "oops";
+                });
+
+                expect(x.unwrapErr().kind).toEqual("Oops");
+                expect(x.unwrapErr().message).toEqual("oops");
+                expect(x.unwrapErr()).toBeInstanceOf(Error);
+            });
         });
     });
 
@@ -466,10 +439,10 @@ describe("Result", () => {
         });
     });
 
-    describe(".toAsyncResult()", () => {
-        it("returns the Result<A, E> as a AsyncResult<A, E>", async () => {
-            const x = Ok(1).toAsyncResult();
-            expect(x).toBeInstanceOf(AsyncResult);
+    describe(".toTask()", () => {
+        it("returns the Result<A, E> as a Task<A, E>", async () => {
+            const x = Ok(1).toTask();
+            expect(x).toBeInstanceOf(Task);
 
             const y = await x;
             expect(y.unwrap()).toEqual(1);

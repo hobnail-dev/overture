@@ -19,3 +19,7 @@ export function Exn<T extends string>(kind: T, arg: string | Error): Exn<T> {
     e.kind = kind;
     return e;
 }
+
+export const panic = (msg: string): never => {
+    throw new Error(msg);
+};

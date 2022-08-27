@@ -3,7 +3,7 @@
 * [Quick Start](result/quickstart.md)
 * Reference
     * [Result](result/reference/result.md)
-    * [AsyncResult](result/reference/asyncResult.md)
+    * [Task](result/reference/task.md)
     * [Array](result/reference/array.md)
     * [Exn](result/reference/exn.md)
 --- 

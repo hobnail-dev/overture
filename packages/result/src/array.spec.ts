@@ -1,17 +1,17 @@
 import "./array";
 
-import { Async, AsyncErr, AsyncOk, AsyncResult } from "./asyncResult";
 import { Err, Ok, Result } from "./result";
+import { AsyncErr, AsyncOk, Task } from "./task";
 
 describe("Array", () => {
     const isEven = (n: number): Result<number, string> =>
         n % 2 === 0 ? Ok(n) : Err("not even");
 
-    const isEvenAsync = (n: number): AsyncResult<number, string> =>
+    const isEvenAsync = (n: number): Task<number, string> =>
         n % 2 === 0 ? AsyncOk(n) : AsyncErr("not even");
 
     const isEvenPromise = (n: number): Promise<Result<number, string>> =>
-        n % 2 === 0 ? Async(Ok(n)) : Async(Err("not even"));
+        n % 2 === 0 ? Promise.resolve(Ok(n)) : Promise.resolve(Err("not even"));
 
     describe(".collectResult", () => {
         it("Given a Result returning function, executes it against all values in the array, returning a Result with all the Ok values if they are all Ok.", () => {
@@ -27,25 +27,25 @@ describe("Array", () => {
         });
     });
 
-    describe(".collectAsyncResult", () => {
-        it("Given an AsyncResult returning function, executes it against all values in the array, returning a AsyncResult with all the Ok values if they are all Ok.", async () => {
-            const a = await [2, 4, 6, 8].collectAsyncResult(isEvenAsync);
+    describe(".collectTask", () => {
+        it("Given an Task returning function, executes it against all values in the array, returning a Task with all the Ok values if they are all Ok.", async () => {
+            const a = await [2, 4, 6, 8].collectTask(isEvenAsync);
             expect(a.unwrap()).toEqual([2, 4, 6, 8]);
         });
 
-        it("Given an Promise<Result> returning function, executes it against all values in the array, returning a AsyncResult with all the Ok values if they are all Ok.", async () => {
-            const b = await [2, 4, 6, 8].collectAsyncResult(isEvenPromise);
+        it("Given an Promise<Result> returning function, executes it against all values in the array, returning a Task with all the Ok values if they are all Ok.", async () => {
+            const b = await [2, 4, 6, 8].collectTask(isEvenPromise);
             expect(b.unwrap()).toEqual([2, 4, 6, 8]);
         });
 
-        it("Given an AsyncResult returning function, executes it against all values in the array, returning a AsyncResult with the first Err if any returns an Err.", async () => {
-            const actual = await [1, 2, 3, 4].collectAsyncResult(isEvenAsync);
+        it("Given an Task returning function, executes it against all values in the array, returning a Task with the first Err if any returns an Err.", async () => {
+            const actual = await [1, 2, 3, 4].collectTask(isEvenAsync);
 
             expect(actual.unwrapErr()).toEqual("not even");
         });
 
-        it("Given an PromiseResult returning function, executes it against all values in the array, returning a AsyncResult with the first Err if any returns an Err.", async () => {
-            const actual = await [1, 2, 3, 4].collectAsyncResult(isEvenPromise);
+        it("Given an PromiseResult returning function, executes it against all values in the array, returning a Task with the first Err if any returns an Err.", async () => {
+            const actual = await [1, 2, 3, 4].collectTask(isEvenPromise);
 
             expect(actual.unwrapErr()).toEqual("not even");
         });
@@ -67,31 +67,31 @@ describe("Array", () => {
         });
     });
 
-    describe("::transposeAsyncResult", () => {
-        it("Given a AsyncResult returning function, executes it against all values in the array, returning a AsyncResult with all the Ok values if they are all Ok.", async () => {
+    describe("::transposeTask", () => {
+        it("Given a Task returning function, executes it against all values in the array, returning a Task with all the Ok values if they are all Ok.", async () => {
             const foo = [2, 4, 6, 8].map(isEvenAsync);
-            const actual = await Array.transposeAsyncResult(foo);
+            const actual = await Array.transposeTask(foo);
 
             expect(actual.unwrap()).toEqual([2, 4, 6, 8]);
         });
 
-        it("Given a Promise<Result> returning function, executes it against all values in the array, returning a AsyncResult with all the Ok values if they are all Ok.", async () => {
+        it("Given a Promise<Result> returning function, executes it against all values in the array, returning a Task with all the Ok values if they are all Ok.", async () => {
             const foo = [2, 4, 6, 8].map(isEvenPromise);
-            const actual = await Array.transposeAsyncResult(foo);
+            const actual = await Array.transposeTask(foo);
 
             expect(actual.unwrap()).toEqual([2, 4, 6, 8]);
         });
 
-        it("Given a AsyncResult returning function, executes it against all values in the array, returning a AsyncResult with the first Err if any returns an Err.", async () => {
+        it("Given a Task returning function, executes it against all values in the array, returning a Task with the first Err if any returns an Err.", async () => {
             const foo = [1, 2, 3, 4].map(isEvenAsync);
-            const actual = await Array.transposeAsyncResult(foo);
+            const actual = await Array.transposeTask(foo);
 
             expect(actual.unwrapErr()).toEqual("not even");
         });
 
-        it("Given a Promise<Result> returning function, executes it against all values in the array, returning a AsyncResult with the first Err if any returns an Err.", async () => {
+        it("Given a Promise<Result> returning function, executes it against all values in the array, returning a Task with the first Err if any returns an Err.", async () => {
             const foo = [1, 2, 3, 4].map(isEvenPromise);
-            const actual = await Array.transposeAsyncResult(foo);
+            const actual = await Array.transposeTask(foo);
 
             expect(actual.unwrapErr()).toEqual("not even");
         });
@@ -107,10 +107,10 @@ describe("Array", () => {
         });
     });
 
-    describe("::partitionAsyncResults()", () => {
-        it("Paritions an Array of AsyncResults into a tuple with the Oks and the Errs", async () => {
+    describe("::partitionTasks()", () => {
+        it("Paritions an Array of Tasks into a tuple with the Oks and the Errs", async () => {
             const arr = [AsyncOk(1), AsyncOk(2), AsyncErr("oops")];
-            const [oks, errs] = await Array.partitionAsyncResults(arr);
+            const [oks, errs] = await Array.partitionTasks(arr);
 
             expect(oks).toEqual([1, 2]);
             expect(errs).toEqual(["oops"]);

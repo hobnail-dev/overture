@@ -30,48 +30,48 @@ const d = Array.transposeResult(c);
 expect(d.unwrapErr()).toEqual("bla: not a number");
 
 ```
-## ::transposeAsyncResult 
+## ::transposeTask 
 
-<span class="sig">`Array<AsyncResult<A, E>> -> AsyncResult<Array<A>, E>`</span>
+<span class="sig">`Array<Task<A, E>> -> Task<Array<A>, E>`</span>
 
-Iterates over the `Array`, stopping as soon as a `AsyncResult` that is an `Err` is found.
+Iterates over the `Array`, stopping as soon as a `Task` that is an `Err` is found.
 
-Returns a `AsyncResult` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
+Returns a `Task` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
 ##### example
 
 ```ts
-declare function parseNumAsync(x: string): AsyncResult<number, string>;
+declare function parseNumAsync(x: string): Task<number, string>;
 
-const a: Array<AsyncResult<number, string>> = ["1", "2", "3"].map(parseNumAsync);
-const b: AsyncResult<Array<A>, E> = Array.transposeAsyncResult(a);
+const a: Array<Task<number, string>> = ["1", "2", "3"].map(parseNumAsync);
+const b: Task<Array<A>, E> = Array.transposeTask(a);
 
 expect(await b.unwrap()).toEqual([1, 2, 3])
 
 const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
-const d = Array.transposeAsyncResult(c);
+const d = Array.transposeTask(c);
 
 expect(await d.unwrapErr()).toEqual("bla: not a number");
 
 ```
-## ::transposeAsyncResult 
+## ::transposeTask 
 
-<span class="sig">`Array<Promise<Result<A, E>>> -> AsyncResult<Array<A>, E>`</span>
+<span class="sig">`Array<Promise<Result<A, E>>> -> Task<Array<A>, E>`</span>
 
 Iterates over the `Array`, stopping as soon as a `Promise` that contains an `Err` `Result` is found.
 
-Returns a `AsyncResult` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
+Returns a `Task` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
 ##### example
 
 ```ts
 declare function parseNumAsync(x: string): Promise<Result<number, string>>;
 
 const a: Array<Promise<Result<number, string>>> = ["1", "2", "3"].map(parseNumAsync);
-const b: AsyncResult<Array<A>, E> = Array.transposeAsyncResult(a);
+const b: Task<Array<A>, E> = Array.transposeTask(a);
 
 expect(await b.unwrap()).toEqual([1, 2, 3])
 
 const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
-const d = Array.transposeAsyncResult(c);
+const d = Array.transposeTask(c);
 
 expect(await d.unwrapErr()).toEqual("bla: not a number");
 
@@ -91,22 +91,22 @@ expect(oks).toEqual([1, 2])
 expect(errs).toEqual(["oops"]);
 
 ```
-## ::partitionAsyncResults 
+## ::partitionTasks 
 
-<span class="sig">`Array<AsyncResult<A, E>> -> Promise<Array<A> * Array<E>>`</span>
+<span class="sig">`Array<Task<A, E>> -> Promise<Array<A> * Array<E>>`</span>
 
-Paritions an Array of AsyncResults into an Array with the extracted Oks tupled with an Array with the extracted Errs.
+Paritions an Array of Tasks into an Array with the extracted Oks tupled with an Array with the extracted Errs.
 ##### example
 
 ```ts
 const arr = [AsyncOk(1), AsyncOk(2), AsyncErr("oops")];
-const [oks, errs] = await Array.partitionAsyncResults(arr);
+const [oks, errs] = await Array.partitionTasks(arr);
 
 expect(oks).toEqual([1, 2])
 expect(errs).toEqual(["oops"]);
 
 ```
-## ::partitionAsyncResults 
+## ::partitionTasks 
 
 <span class="sig">`Array<Promise<Result<A, E>>> -> Promise<Array<A> * Array<E>>`</span>
 
@@ -119,7 +119,7 @@ const arr = [
   Promise.resolve(Ok(2)),
   Promise.resolve(Err("oops"))
 ];
-const [oks, errs] = await Array.partitionAsyncResults(arr);
+const [oks, errs] = await Array.partitionTasks(arr);
 
 expect(oks).toEqual([1, 2])
 expect(errs).toEqual(["oops"]);
@@ -143,24 +143,24 @@ const b = [1, 2, 3, 4].collectResult(isEven);
 expect(b.unwrapErr()).toEqual("1: not even");
 
 ```
-## .collectAsyncResult 
+## .collectTask 
 
-<span class="sig">`(T -> AsyncResult<A, E>) -> AsyncResult<Array<A>, E>`</span>
+<span class="sig">`(T -> Task<A, E>) -> Task<Array<A>, E>`</span>
 
 
 ##### example
 
 ```ts
-declare function parseNumAsync(x: string): AsyncResult<number, string>;
+declare function parseNumAsync(x: string): Task<number, string>;
 
-const a = ["1", "2", "3"].collectAsyncResult(parseNumAsync);
+const a = ["1", "2", "3"].collectTask(parseNumAsync);
 expect(await a.unwrap()).toEqual([1, 2, 3])
 
-const b = ["1", "bla", "2", "ble"].collectAsyncResult(parseNumAsync);
+const b = ["1", "bla", "2", "ble"].collectTask(parseNumAsync);
 expect(await b.unwrapErr()).toEqual("bla: not a number");
 
 ```
-## .collectAsyncResult 
+## .collectTask 
 
 <span class="sig">`(T -> Promise<Result<A, E>>) -> Promise<Result<Array<A>, E>>`</span>
 
@@ -170,10 +170,10 @@ expect(await b.unwrapErr()).toEqual("bla: not a number");
 ```ts
 declare function parseNumAsync(x: string): Promise<Result<number, string>>;
 
-const a = ["1", "2", "3"].collectAsyncResult(parseNumAsync);
+const a = ["1", "2", "3"].collectTask(parseNumAsync);
 expect(await a.unwrap()).toEqual([1, 2, 3])
 
-const b = ["1", "bla", "2", "ble"].collectAsyncResult(parseNumAsync);
+const b = ["1", "bla", "2", "ble"].collectTask(parseNumAsync);
 expect(await b.unwrapErr()).toEqual("bla: not a number");
 
 ```

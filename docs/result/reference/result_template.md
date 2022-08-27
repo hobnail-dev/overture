@@ -9,4 +9,4 @@ It can either be `Ok`, representing success and containing a value of type `A`, 
 > `::function` functions starting with `::` are static functions.
 
 > ### Important!
-> `Result` returning functions must **always** specify their return value. If you forget to, *TypeScript* will infer the returng type incorrectly.
+> `Result` returning functions should always specify their return value. If you forget to, *TypeScript* can infer the returng type incorrectly.

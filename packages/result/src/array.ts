@@ -1,5 +1,5 @@
-import { AsyncResult } from "./asyncResult";
 import { Err, Ok, Result } from "./result";
+import { Task } from "./task";
 
 declare global {
     interface Array<T> {
@@ -24,40 +24,38 @@ declare global {
         /**
          * `this: Array<T>`
          *
-         * `collectAsyncResult: (T -> AsyncResult<A, E>) -> AsyncResult<Array<A>, E>`
+         * `collectTask: (T -> Task<A, E>) -> Task<Array<A>, E>`
 
          * ---
          * @example
-         * declare function parseNumAsync(x: string): AsyncResult<number, string>;
+         * declare function parseNumAsync(x: string): Task<number, string>;
          * 
-         * const a = ["1", "2", "3"].collectAsyncResult(parseNumAsync);
+         * const a = ["1", "2", "3"].collectTask(parseNumAsync);
          * expect(await a.unwrap()).toEqual([1, 2, 3])
          * 
-         * const b = ["1", "bla", "2", "ble"].collectAsyncResult(parseNumAsync);
+         * const b = ["1", "bla", "2", "ble"].collectTask(parseNumAsync);
          * expect(await b.unwrapErr()).toEqual("bla: not a number");
          */
-        collectAsyncResult<A, E>(
-            fn: (t: T) => AsyncResult<A, E>
-        ): AsyncResult<Array<A>, E>;
+        collectTask<A, E>(fn: (t: T) => Task<A, E>): Task<Array<A>, E>;
 
         /**
          * `this: Array<T>`
          *
-         * `collectAsyncResult: (T -> Promise<Result<A, E>>) -> Promise<Result<Array<A>, E>>`
+         * `collectTask: (T -> Promise<Result<A, E>>) -> Promise<Result<Array<A>, E>>`
 
          * ---
          * @example
          * declare function parseNumAsync(x: string): Promise<Result<number, string>>;
          * 
-         * const a = ["1", "2", "3"].collectAsyncResult(parseNumAsync);
+         * const a = ["1", "2", "3"].collectTask(parseNumAsync);
          * expect(await a.unwrap()).toEqual([1, 2, 3])
          * 
-         * const b = ["1", "bla", "2", "ble"].collectAsyncResult(parseNumAsync);
+         * const b = ["1", "bla", "2", "ble"].collectTask(parseNumAsync);
          * expect(await b.unwrapErr()).toEqual("bla: not a number");
          */
-        collectAsyncResult<A, E>(
+        collectTask<A, E>(
             fn: (t: T) => Promise<Result<A, E>>
-        ): AsyncResult<Array<A>, E>;
+        ): Task<Array<A>, E>;
     }
 
     interface ArrayConstructor {
@@ -85,50 +83,48 @@ declare global {
         ): Result<Array<A>, E>;
 
         /**
-         * `transposeAsyncResult: Array<AsyncResult<A, E>> -> AsyncResult<Array<A>, E>`
+         * `transposeTask: Array<Task<A, E>> -> Task<Array<A>, E>`
          *
          * ---
-         * Iterates over the `Array`, stopping as soon as a `AsyncResult` that is an `Err` is found.
-         * @returns a `AsyncResult` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
+         * Iterates over the `Array`, stopping as soon as a `Task` that is an `Err` is found.
+         * @returns a `Task` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
          * @example
-         * declare function parseNumAsync(x: string): AsyncResult<number, string>;
+         * declare function parseNumAsync(x: string): Task<number, string>;
          *
-         * const a: Array<AsyncResult<number, string>> = ["1", "2", "3"].map(parseNumAsync);
-         * const b: AsyncResult<Array<A>, E> = Array.transposeAsyncResult(a);
+         * const a: Array<Task<number, string>> = ["1", "2", "3"].map(parseNumAsync);
+         * const b: Task<Array<A>, E> = Array.transposeTask(a);
          *
          * expect(await b.unwrap()).toEqual([1, 2, 3])
          *
          * const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
-         * const d = Array.transposeAsyncResult(c);
+         * const d = Array.transposeTask(c);
          *
          * expect(await d.unwrapErr()).toEqual("bla: not a number");
          */
-        transposeAsyncResult<A, E>(
-            results: Array<AsyncResult<A, E>>
-        ): AsyncResult<Array<A>, E>;
+        transposeTask<A, E>(results: Array<Task<A, E>>): Task<Array<A>, E>;
 
         /**
-         * `transposeAsyncResult: Array<Promise<Result<A, E>>> -> AsyncResult<Array<A>, E>`
+         * `transposeTask: Array<Promise<Result<A, E>>> -> Task<Array<A>, E>`
          *
          * ---
          * Iterates over the `Array`, stopping as soon as a `Promise` that contains an `Err` `Result` is found.
-         * @returns a `AsyncResult` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
+         * @returns a `Task` with an `Array` with all the `Ok` values if no `Err` is found, otherwise returns that `Err`.
          * @example
          * declare function parseNumAsync(x: string): Promise<Result<number, string>>;
          *
          * const a: Array<Promise<Result<number, string>>> = ["1", "2", "3"].map(parseNumAsync);
-         * const b: AsyncResult<Array<A>, E> = Array.transposeAsyncResult(a);
+         * const b: Task<Array<A>, E> = Array.transposeTask(a);
          *
          * expect(await b.unwrap()).toEqual([1, 2, 3])
          *
          * const c = ["1", "bla", "2", "ble"].map(parseNumAsync);
-         * const d = Array.transposeAsyncResult(c);
+         * const d = Array.transposeTask(c);
          *
          * expect(await d.unwrapErr()).toEqual("bla: not a number");
          */
-        transposeAsyncResult<A, E>(
+        transposeTask<A, E>(
             results: Array<Promise<Result<A, E>>>
-        ): AsyncResult<Array<A>, E>;
+        ): Task<Array<A>, E>;
 
         /**
          * `partitionResults: Array<Result<A, E>> -> Array<A> * Array<E>`
@@ -147,23 +143,23 @@ declare global {
         ): [Array<A>, Array<E>];
 
         /**
-         * `partitionAsyncResults: Array<AsyncResult<A, E>> -> Promise<Array<A> * Array<E>>`
+         * `partitionTasks: Array<Task<A, E>> -> Promise<Array<A> * Array<E>>`
          *
          * ---
-         * Paritions an Array of AsyncResults into an Array with the extracted Oks tupled with an Array with the extracted Errs.
+         * Paritions an Array of Tasks into an Array with the extracted Oks tupled with an Array with the extracted Errs.
          * @example
          * const arr = [AsyncOk(1), AsyncOk(2), AsyncErr("oops")];
-         * const [oks, errs] = await Array.partitionAsyncResults(arr);
+         * const [oks, errs] = await Array.partitionTasks(arr);
          *
          * expect(oks).toEqual([1, 2])
          * expect(errs).toEqual(["oops"]);
          */
-        partitionAsyncResults<A, E>(
-            results: Array<AsyncResult<A, E>>
+        partitionTasks<A, E>(
+            results: Array<Task<A, E>>
         ): Promise<[Array<A>, Array<E>]>;
 
         /**
-         * `partitionAsyncResults: Array<Promise<Result<A, E>>> -> Promise<Array<A> * Array<E>>`
+         * `partitionTasks: Array<Promise<Result<A, E>>> -> Promise<Array<A> * Array<E>>`
          *
          * ---
          * Paritions an Array of Promise<Result>s into an Array with the extracted Oks tupled with an Array with the extracted Errs.
@@ -173,12 +169,12 @@ declare global {
          *   Promise.resolve(Ok(2)),
          *   Promise.resolve(Err("oops"))
          * ];
-         * const [oks, errs] = await Array.partitionAsyncResults(arr);
+         * const [oks, errs] = await Array.partitionTasks(arr);
          *
          * expect(oks).toEqual([1, 2])
          * expect(errs).toEqual(["oops"]);
          */
-        partitionAsyncResults<A, E>(
+        partitionTasks<A, E>(
             results: Array<Promise<Result<A, E>>>
         ): Promise<[Array<A>, Array<E>]>;
     }
@@ -211,12 +207,12 @@ Object.defineProperty(Array, "transposeResult", {
     },
 });
 
-Object.defineProperty(Array.prototype, "collectAsyncResult", {
+Object.defineProperty(Array.prototype, "collectTask", {
     enumerable: false,
     value: function <T, A, E>(
         this: Array<T>,
-        fn: (t: T) => AsyncResult<A, E> | Promise<Result<A, E>>
-    ): AsyncResult<Array<A>, E> {
+        fn: (t: T) => Task<A, E> | Promise<Result<A, E>>
+    ): Task<Array<A>, E> {
         const prom = Promise.resolve(async () => {
             let res = [];
 
@@ -231,16 +227,16 @@ Object.defineProperty(Array.prototype, "collectAsyncResult", {
             return Ok(res);
         }).then(x => x());
 
-        return AsyncResult.from(prom as any);
+        return Task.from(prom as any);
     },
 });
 
-Object.defineProperty(Array, "transposeAsyncResult", {
+Object.defineProperty(Array, "transposeTask", {
     enumerable: false,
     value: function <A, E>(
-        results: Array<AsyncResult<A, E> | Promise<Result<A, E>>>
-    ): AsyncResult<Array<A>, E> {
-        return results.collectAsyncResult(x => x as any);
+        results: Array<Task<A, E> | Promise<Result<A, E>>>
+    ): Task<Array<A>, E> {
+        return results.collectTask(x => x as any);
     },
 });
 
@@ -259,10 +255,10 @@ Object.defineProperty(Array, "partitionResults", {
     },
 });
 
-Object.defineProperty(Array, "partitionAsyncResults", {
+Object.defineProperty(Array, "partitionTasks", {
     enumerable: false,
     value: async function <A, E>(
-        results: Array<AsyncResult<A, E> | Promise<Result<A, E>>>
+        results: Array<Task<A, E> | Promise<Result<A, E>>>
     ): Promise<[Array<A>, Array<E>]> {
         let oks = [];
         let errs = [];

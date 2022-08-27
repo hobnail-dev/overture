@@ -9,7 +9,7 @@ It can either be `Ok`, representing success and containing a value of type `A`, 
 > `::function` functions starting with `::` are static functions.
 
 > ### Important!
-> `Result` returning functions must **always** specify their return value. If you forget to, *TypeScript* will infer the returng type incorrectly.
+> `Result` returning functions should always specify their return value. If you forget to, *TypeScript* can infer the returng type incorrectly.
 ## Ok 
 
 <span class="sig">`A -> Result<A, E>`</span>
@@ -76,29 +76,6 @@ const y = (() => {
 ```
 ## ::try 
 
-<span class="sig">`(() -> Result<A, E>) -> Result<A, Error | E>`</span>
-
-Catches a function that might throw, adding a stack trace to the returning `Result`.
-
-Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
-##### example
-
-```ts
-const a: Result<number, Error | string> =
-  Result.try(() => {
-          const x = throwIfTrue(true);
-          if (x) return Ok(1);
-    else return Err("CustomError");
-  });
-expect(a.unwrapErr()).toBeInstanceOf(Error);
-
-const b = Result.try(() => { throw "oops" });
-expect(b.unwrapErr()).toBeInstanceOf(Error);
-expect(b.unwrapErr().message).toEqual("oops");
-
-```
-## ::try 
-
 <span class="sig">`(() -> A) -> Result<A, Error>`</span>
 
 Catches a function that might throw, adding a stack trace to the returning `Result`.
@@ -119,33 +96,7 @@ expect(b.unwrapErr()).toBeInstanceOf(Error);
 expect(b.unwrapErr().message).toEqual("oops");
 
 ```
-## ::tryCatch 
-
-<span class="sig">`(T extends string, () -> Result<A, E>) -> Result<A, Exn<T> | E>`</span>
-
-Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `Result`.
-
-Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
-##### example
-
-```ts
-const a: Result<number, Exn<"MyExnName"> | string> =
-  Result.tryCatch("MyExnName", () => {
-   const x = throwIfTrue(true);
-    if (x) return Ok(1);
-    else return Err("CustomError");
-  });
-expect(a.unwrapErr()).toBeInstanceOf(Error);
-expect(a.unwrapErr().kind).toEqual("MyExnName");
-expect(a.unwrapErr().message).toEqual("oh no");
-
-const b = Result.tryCatch("Panic!", () => { throw "oops" });
-expect(b.unwrapErr()).toBeInstanceOf(Error);
-expect(b.unwrapErr().kind).toEqual("Panic!");
-expect(b.unwrapErr().message).toEqual("oops");
-
-```
-## ::tryCatch 
+## ::try 
 
 <span class="sig">`(T extends string, () -> A) -> Result<A, Exn<T>>`</span>
 
@@ -156,7 +107,7 @@ Note: If anything other than an `Error` is thrown, will and stringify the thrown
 
 ```ts
 const a: Result<number, Exn<"MyExnName">> =
-  Result.tryCatch("MyExnName", () => {
+  Result.try("MyExnName", () => {
     if (true) throw new Error("oh no")
     else return 1;
   });
@@ -164,7 +115,7 @@ expect(a.unwrapErr()).toBeInstanceOf(Error);
 expect(a.unwrapErr().kind).toEqual("MyExnName");
 expect(a.unwrapErr().message).toEqual("oh no");
 
-const b = Result.tryCatch("Panic!", () => { throw "oops" });
+const b = Result.try("Panic!", () => { throw "oops" });
 expect(b.unwrapErr()).toBeInstanceOf(Error);
 expect(b.unwrapErr().kind).toEqual("Panic!");
 expect(b.unwrapErr().message).toEqual("oops");
@@ -193,9 +144,9 @@ expect(x.message).toEqual("oh no");
 ```
 ## ::transposePromise 
 
-<span class="sig">`Result<Promise<A>, E> -> AsyncResult<A, E>`</span>
+<span class="sig">`Result<Promise<A>, E> -> Task<A, E>`</span>
 
-Tranposes a `Result<Promise<A>, E>` into a `AsyncResult<A, E>`.
+Tranposes a `Result<Promise<A>, E>` into a `Task<A, E>`.
 ##### example
 
 ```ts
@@ -203,7 +154,7 @@ declare getPokemon(id: number): Promise<Pokemon>;
 declare parseId(str: string): Result<number, string>;
 
 const x: Result<Promise<Pokemon>, string> = parseId("5").map(getPokemon);
-const y: AsyncResult<Pokemon, string> = Result.transposePromise(x);
+const y: Task<Pokemon, string> = Result.transposePromise(x);
 
 ```
 ## ::transposeNullable 
@@ -588,15 +539,15 @@ const y = Ok(4).toErrArray();
 expect(y.length).toEqual(0);
 
 ```
-## .toAsyncResult 
+## .toTask 
 
-<span class="sig">`() -> AsyncResult<A, E>`</span>
+<span class="sig">`() -> Task<A, E>`</span>
 
-Converts a `Result` into a `AsyncResult`.
+Converts a `Result` into a `Task`.
 ##### example
 
 ```ts
-const a = Ok(5).toAsyncResult();
+const a = Ok(5).toTask();
 
 ```
 ## .and 
@@ -733,11 +684,11 @@ expect(y.unwrapErr()).toEqual("oops");
 ```
 ## .collectPromise 
 
-<span class="sig">`(A -> Promise<B>) -> AsyncResult<B, E>`</span>
+<span class="sig">`(A -> Promise<B>) -> Task<B, E>`</span>
 
 Given a `Promise` returning callback, executes it if `this` is `Ok`.
 
-Returns the inner value of the `Promise` wrapped in a `AsyncResult`.
+Returns the inner value of the `Promise` wrapped in a `Task`.
 ##### example
 
 ```ts
