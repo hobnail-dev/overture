@@ -683,6 +683,21 @@ if (x.isOk()) {
 }
 
 ```
+## .err 
+
+<span class="sig">`E | undefined`</span>
+
+The raw `Err` value, inside the `Result<A, E>`.
+##### example
+
+```ts
+const x = Err(3);
+
+if (x.isErr()) {
+  console.log(x.err); // only available when Result is Err.
+}
+
+```
 ## .isOk 
 
 <span class="sig">`() -> boolean`</span>
@@ -709,7 +724,7 @@ expect(val.isErr()).toBe(true);
 ```
 ## .err 
 
-<span class="sig">`E | undefined`</span>
+<span class="sig">`E`</span>
 
 The raw `Err` value, inside the `Result<A, E>`.
 ##### example
@@ -738,6 +753,21 @@ exepct(b.stack).toBeUndefined();
 
 const c = Err("oh no").trace();
 expect(c.stack).toBeDefined();
+
+```
+## .val 
+
+<span class="sig">`A | undefined`</span>
+
+The `Ok` value inside the `Result<A, E>`.
+##### example
+
+```ts
+const x = Ok(3);
+
+if (x.isOk()) {
+  console.log(x.val); // only available when Result is Ok.
+}
 
 ```
 ## .isOk 

@@ -1094,14 +1094,14 @@ export const Result = {
      * expect(b.unwrapErr().name).toEqual("Panic!");
      * expect(b.unwrapErr().message).toEqual("oops");
      */
-    tryCatch<A, T extends string>(exnName: T, fn: () => A): Result<A, Exn<T>> {
+    tryCatch<A, T extends string>(kind: T, fn: () => A): Result<A, Exn<T>> {
         try {
             return Ok(fn());
         } catch (e) {
             const error = e instanceof Error ? e : new Error(stringify(e));
-            error.name = exnName;
+            const exn = Exn(kind, error);
 
-            return Err(error, error.stack) as any;
+            return Err(exn, error.stack);
         }
     },
 

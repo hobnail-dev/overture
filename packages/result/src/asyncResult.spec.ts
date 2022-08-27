@@ -82,7 +82,7 @@ describe("AsyncResult", () => {
 
             const err = await x.unwrapErr();
             expect(err).toBeInstanceOf(Error);
-            expect(err.name).toEqual("Oh no!");
+            expect(err.kind).toEqual("Oh no!");
             expect(err.message).toEqual("oh no");
         });
 
@@ -94,7 +94,7 @@ describe("AsyncResult", () => {
 
             const err = await x.unwrapErr();
             expect(err).toBeInstanceOf(Error);
-            expect(err.name).toEqual("Oops");
+            expect(err.kind).toEqual("Oops");
             expect(err.message).toEqual("oops");
         });
     });

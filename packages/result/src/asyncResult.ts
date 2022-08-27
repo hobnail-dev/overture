@@ -118,16 +118,16 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * expect(y.message).toEqual("oops");
      */
     static tryCatch<A, T extends string>(
-        exnName: T,
+        kind: T,
         fn: () => Promise<A>
     ): AsyncResult<A, Exn<T>> {
         const x: Promise<Result<A, Exn<T>>> = fn()
             .then(Ok)
             .catch((e: unknown) => {
                 const error = e instanceof Error ? e : new Error(stringify(e));
+                const exn = Exn(kind, error);
 
-                error.name = exnName;
-                return Err(error, error.stack) as any;
+                return Err(exn, error.stack);
             });
 
         return AsyncResult.from(x);

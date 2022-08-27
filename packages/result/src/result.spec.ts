@@ -64,7 +64,7 @@ describe("Result", () => {
                 throw new Error("oh no");
             });
 
-            expect(x.unwrapErr().name).toEqual("OhNo");
+            expect(x.unwrapErr().kind).toEqual("OhNo");
             expect(x.unwrapErr().message).toEqual("oh no");
             expect(x.unwrapErr()).toBeInstanceOf(Error);
         });
@@ -75,7 +75,7 @@ describe("Result", () => {
                 throw "oops";
             });
 
-            expect(x.unwrapErr().name).toEqual("Oops");
+            expect(x.unwrapErr().kind).toEqual("Oops");
             expect(x.unwrapErr().message).toEqual("oops");
             expect(x.unwrapErr()).toBeInstanceOf(Error);
         });

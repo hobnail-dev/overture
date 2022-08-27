@@ -2,11 +2,11 @@
 
 `Exn<T>` is a simple type to better differentiate caught `throwable`s without having to extend the `Error` class.
 
-A `Exn<"MyError">` is simply a instance of `Error` where the `name` property is `"MyError"`.
+A `Exn<"MyError">` is simply an instance of `Error` with a `kind` property `"MyError"`.
 
 ```ts
 export interface Exn<T extends string> extends Error {
-    name: T;
+    kind: T;
 }
 ```
 
@@ -23,9 +23,9 @@ const coolFunction = (): Result<number, Exn<"ParsingError">> => {
         return Ok(something.id);
     } catch (e) {
         const error = e instanceof Error ? e : new Error(`${e}`);
-        error.name = "ParsingError";
+        const exn = Exn("ParsingError", error);
 
-        return Err(error as Exn<"ParsingError">);
+        return Err(exn);
     }
 }
 ```
@@ -45,23 +45,32 @@ This can be particularly helpful when dealing with multiple error types.
 ```ts
 declare funOne(): Result<number, Exn<"One">>;
 declare funTwo(n: number): Result<string, Exn<"Two">>;
+declare funThree(n: number): Result<boolean, Exn<"Two">>;
 
 const something = 
     result(function*() {
         const one = yield* funOne();
         const two = yield* funTwo();
-        return two;
+        const three = yield* funThree();
+
+        return three;
     });
 
 if(something.isErr()) {
-  const { err } = something;
+    const { err } = something;
 
-  if (err.name === "One") {
-    // specific logic for when Exn "One" happens.
-    // ... 
-  } 
+    switch (err.kind) {
+        case "One":
+            // specific logic for when Exn "One" happens.
+            // ... 
 
-  // specific logic for when Exn "Two" happens.
-  // ...
+        case "Two":
+            // specific logic for when Exn "Two" happens.
+            // ... 
+
+        case "Three": 
+            // specific logic for when Exn "Three" happens.
+            // ... 
+    }
 }
 ```
