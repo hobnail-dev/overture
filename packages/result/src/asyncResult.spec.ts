@@ -6,6 +6,7 @@ import {
     asyncResult,
 } from "./asyncResult";
 import { Err, Ok, Result } from "./result";
+import { unit } from "./typeUtils";
 
 describe("AsyncResult", () => {
     describe("::from", () => {
@@ -43,9 +44,22 @@ describe("AsyncResult", () => {
             expect(await x.unwrap()).toEqual("didnt throw");
         });
 
+        it("Creates an Ok AsyncResult from a function that might throw but instead returned an Ok", async () => {
+            const x = AsyncResult.try(async () => Ok("hello"));
+
+            expect(await x.unwrap()).toEqual("hello");
+        });
+
+        it("Creates an Err AsyncResult from a function that might throw but instead returned an Err", async () => {
+            const x = AsyncResult.try(async () => Err("hello"));
+
+            expect(await x.unwrapErr()).toEqual("hello");
+        });
+
         it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
             const x = AsyncResult.try(async () => {
                 throw new Error("oh no");
+                return unit;
             });
             expect(x).toBeInstanceOf(AsyncResult);
 
@@ -58,6 +72,7 @@ describe("AsyncResult", () => {
             const x = AsyncResult.try(async () => {
                 // eslint-disable-next-line @typescript-eslint/no-throw-literal
                 throw "oops";
+                return unit;
             });
 
             const err = await x.unwrapErr();
@@ -74,9 +89,26 @@ describe("AsyncResult", () => {
             expect(await x.unwrap()).toEqual("didnt throw");
         });
 
+        it("Creates an Ok AsyncResult from a function that might throw but instead returned an Ok", async () => {
+            const x = AsyncResult.tryCatch("something", async () =>
+                Ok("hello")
+            );
+
+            expect(await x.unwrap()).toEqual("hello");
+        });
+
+        it("Creates an Err AsyncResult from a function that might throw but instead returned an Err", async () => {
+            const x = AsyncResult.tryCatch("something", async () =>
+                Err("hello")
+            );
+
+            expect(await x.unwrapErr()).toEqual("hello");
+        });
+
         it("Creates an Err AsyncResult with an Error from an async function that throws", async () => {
             const x = AsyncResult.tryCatch("Oh no!", async () => {
                 throw new Error("oh no");
+                return unit;
             });
             expect(x).toBeInstanceOf(AsyncResult);
 
@@ -90,6 +122,7 @@ describe("AsyncResult", () => {
             const x = AsyncResult.tryCatch("Oops", async () => {
                 // eslint-disable-next-line @typescript-eslint/no-throw-literal
                 throw "oops";
+                return unit;
             });
 
             const err = await x.unwrapErr();

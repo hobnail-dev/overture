@@ -61,7 +61,31 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `try: (() -> A) -> AsyncResult<A, Error>`
+     * `try: (() -> Promise<A, E>) -> AsyncResult<A, Error | E>`
+     *
+     * ---
+     * Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in a new `Error` instance.
+     *
+     * @example
+     * const a: AsyncResult<number, Error | string> =
+     *   AsyncResult.try(async () => {
+     *     const x = throwIftrue(true);
+     *     if (x) return Ok(1);
+     *     else return Err("CustomError");
+     *   });
+     * expect((await a.unwrapErr())).toBeInstanceOf(Error);
+     *
+     * const b = AsyncResult.try(async () => { throw "oops" });
+     * expect((await b.unwrapErr())).toBeInstanceOf(Error);
+     * expect((await b.unwrapErr()).message).toEqual("oops");
+     */
+    static try<A, E>(
+        fn: () => Promise<Result<A, E>>
+    ): AsyncResult<A, Error | E>;
+    /**
+     * `try: (() -> Promise<A>) -> AsyncResult<A, Error>`
      *
      * ---
      * Catches a function that might throw, adding a stack trace to the returning `AsyncResult`.
@@ -80,9 +104,12 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      * expect((await b.unwrapErr())).toBeInstanceOf(Error);
      * expect((await b.unwrapErr()).message).toEqual("oops");
      */
-    static try<A>(fn: () => Promise<A>): AsyncResult<A, Error> {
+    static try<A>(fn: () => Promise<A>): AsyncResult<A, Error>;
+    static try<A, E>(
+        fn: () => Promise<Result<A, E> | A>
+    ): AsyncResult<A, Error | E> {
         const x: Promise<Result<A, Error>> = fn()
-            .then(Ok)
+            .then(a => (a instanceof Result ? a : Ok(a)) as any)
             .catch((e: unknown) => {
                 const error = e instanceof Error ? e : new Error(stringify(e));
 
@@ -93,7 +120,37 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
     }
 
     /**
-     * `tryCatch: (T extends string, () -> A) -> AsyncResult<A, Exn<T>>`
+     * `tryCatch: (T extends string, () -> Promise<Result<A, E>>) -> AsyncResult<A, Exn<T>>`
+     *
+     * ---
+     * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
+     *
+     * Note: If anything other than an `Error` is thrown, will and stringify the thrown value as the message in the `Exn`.
+     *
+     * @example
+     * const a: AsyncResult<number, Exn<"MyExnName"> | string> =
+     *   AsyncResult.tryCatch("MyExnName", async () => {
+     *     const x = throwIfTrue(true);
+     *     if (x) return Ok(1);
+     *     else return Err("CustomError");
+     *   });
+     * const x = await a.unwrapErr();
+     * expect(x).toBeInstanceOf(Error);
+     * expect(x.kind).toEqual("MyExnName");
+     * expect(x.message).toEqual("oh no");
+     *
+     * const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
+     * const y = await b.unwrapErr();
+     * expect(y).toBeInstanceOf(Error);
+     * expect(y.kind).toEqual("Panic!");
+     * expect(y.message).toEqual("oops");
+     */
+    static tryCatch<A, T extends string, E>(
+        kind: T,
+        fn: () => Promise<Result<A, E>>
+    ): AsyncResult<A, Exn<T> | E>;
+    /**
+     * `tryCatch: (T extends string, () -> Promise<A>) -> AsyncResult<A, Exn<T>>`
      *
      * ---
      * Catches a function that might throw, conveniently creating a `Exn<T>` from the caught value, and adding a stack trace to the returning `AsyncResult`.
@@ -108,21 +165,25 @@ export class AsyncResult<A, E> implements PromiseLike<Result<A, E>> {
      *   });
      * const x = await a.unwrapErr();
      * expect(x).toBeInstanceOf(Error);
-     * expect(x.name).toEqual("MyExnName");
+     * expect(x.kind).toEqual("MyExnName");
      * expect(x.message).toEqual("oh no");
      *
      * const b = AsyncResult.tryCatch("Panic!", async () => { throw "oops" });
      * const y = await b.unwrapErr();
      * expect(y).toBeInstanceOf(Error);
-     * expect(y.name).toEqual("Panic!");
+     * expect(y.kind).toEqual("Panic!");
      * expect(y.message).toEqual("oops");
      */
     static tryCatch<A, T extends string>(
         kind: T,
         fn: () => Promise<A>
-    ): AsyncResult<A, Exn<T>> {
+    ): AsyncResult<A, Exn<T>>;
+    static tryCatch<A, T extends string, E>(
+        kind: T,
+        fn: () => Promise<Result<A, E> | A>
+    ): AsyncResult<A, Exn<T> | E> {
         const x: Promise<Result<A, Exn<T>>> = fn()
-            .then(Ok)
+            .then(a => (a instanceof Result ? a : Ok(a)) as any)
             .catch((e: unknown) => {
                 const error = e instanceof Error ? e : new Error(stringify(e));
                 const exn = Exn(kind, error);
