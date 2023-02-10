@@ -1,6 +1,6 @@
 # @hobnail/webapp
 
-`@hobnail/webapp` is a thin wrapper around Express, providing compile-time dependency injection.
+`@hobnail/webapp` is a thin wrapper around Express, providing reflection-free dependency injection.
 
 ## Basic Usage
 ```ts

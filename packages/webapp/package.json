@@ -1,6 +1,6 @@
 {
     "name": "@hobnail/webapp",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "description": "Minimal dependency injection for Express.",
     "license": "MIT",
     "author": {
