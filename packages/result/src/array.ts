@@ -180,7 +180,7 @@ declare global {
     }
 }
 
-if (!Object.hasOwn(Array, "collectResult")) {
+if (!Object.hasOwn(Array.prototype, "collectResult")) {
     Object.defineProperty(Array.prototype, "collectResult", {
         enumerable: false,
         value: function <T, A, E>(
