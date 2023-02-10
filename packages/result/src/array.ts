@@ -180,44 +180,17 @@ declare global {
     }
 }
 
-Object.defineProperty(Array.prototype, "collectResult", {
-    enumerable: false,
-    value: function <T, A, E>(
-        this: Array<T>,
-        fn: (t: T) => Result<A, E>
-    ): Result<Array<A>, E> {
-        let res = [];
-
-        for (const el of this) {
-            const x = fn(el);
-
-            if (x.isErr()) return Err(x.err!);
-
-            res.push(x.unwrap());
-        }
-
-        return Ok(res);
-    },
-});
-
-Object.defineProperty(Array, "transposeResult", {
-    enumerable: false,
-    value: function <A, E>(results: Array<Result<A, E>>): Result<Array<A>, E> {
-        return results.collectResult(x => x);
-    },
-});
-
-Object.defineProperty(Array.prototype, "collectTask", {
-    enumerable: false,
-    value: function <T, A, E>(
-        this: Array<T>,
-        fn: (t: T) => Task<A, E> | Promise<Result<A, E>>
-    ): Task<Array<A>, E> {
-        const prom = Promise.resolve(async () => {
+if (!Object.hasOwn(Array, "collectResult")) {
+    Object.defineProperty(Array.prototype, "collectResult", {
+        enumerable: false,
+        value: function <T, A, E>(
+            this: Array<T>,
+            fn: (t: T) => Result<A, E>
+        ): Result<Array<A>, E> {
             let res = [];
 
             for (const el of this) {
-                const x = await fn(el);
+                const x = fn(el);
 
                 if (x.isErr()) return Err(x.err!);
 
@@ -225,51 +198,84 @@ Object.defineProperty(Array.prototype, "collectTask", {
             }
 
             return Ok(res);
-        }).then(x => x());
+        },
+    });
 
-        return Task.from(prom as any);
-    },
-});
+    Object.defineProperty(Array, "transposeResult", {
+        enumerable: false,
+        value: function <A, E>(
+            results: Array<Result<A, E>>
+        ): Result<Array<A>, E> {
+            return results.collectResult(x => x);
+        },
+    });
 
-Object.defineProperty(Array, "transposeTask", {
-    enumerable: false,
-    value: function <A, E>(
-        results: Array<Task<A, E> | Promise<Result<A, E>>>
-    ): Task<Array<A>, E> {
-        return results.collectTask(x => x as any);
-    },
-});
+    Object.defineProperty(Array.prototype, "collectTask", {
+        enumerable: false,
+        value: function <T, A, E>(
+            this: Array<T>,
+            fn: (t: T) => Task<A, E> | Promise<Result<A, E>>
+        ): Task<Array<A>, E> {
+            const prom = Promise.resolve(async () => {
+                let res = [];
 
-Object.defineProperty(Array, "partitionResults", {
-    enumerable: false,
-    value: function <A, E>(results: Array<Result<A, E>>): [Array<A>, Array<E>] {
-        let oks = [];
-        let errs = [];
+                for (const el of this) {
+                    const x = await fn(el);
 
-        for (const r of results) {
-            if (r.isOk()) oks.push(r.val);
-            else errs.push(r.unwrapErr());
-        }
+                    if (x.isErr()) return Err(x.err!);
 
-        return [oks, errs] as any;
-    },
-});
+                    res.push(x.unwrap());
+                }
 
-Object.defineProperty(Array, "partitionTasks", {
-    enumerable: false,
-    value: async function <A, E>(
-        results: Array<Task<A, E> | Promise<Result<A, E>>>
-    ): Promise<[Array<A>, Array<E>]> {
-        let oks = [];
-        let errs = [];
+                return Ok(res);
+            }).then(x => x());
 
-        const rs = await Promise.all(results);
+            return Task.from(prom as any);
+        },
+    });
 
-        for (const r of rs) {
-            if (r.isOk()) oks.push(r.val);
-            else errs.push(r.unwrapErr());
-        }
+    Object.defineProperty(Array, "transposeTask", {
+        enumerable: false,
+        value: function <A, E>(
+            results: Array<Task<A, E> | Promise<Result<A, E>>>
+        ): Task<Array<A>, E> {
+            return results.collectTask(x => x as any);
+        },
+    });
 
-        return [oks, errs] as any;
-    },
-});
+    Object.defineProperty(Array, "partitionResults", {
+        enumerable: false,
+        value: function <A, E>(
+            results: Array<Result<A, E>>
+        ): [Array<A>, Array<E>] {
+            let oks = [];
+            let errs = [];
+
+            for (const r of results) {
+                if (r.isOk()) oks.push(r.val);
+                else errs.push(r.unwrapErr());
+            }
+
+            return [oks, errs] as any;
+        },
+    });
+
+    Object.defineProperty(Array, "partitionTasks", {
+        enumerable: false,
+        value: async function <A, E>(
+            results: Array<Task<A, E> | Promise<Result<A, E>>>
+        ): Promise<[Array<A>, Array<E>]> {
+            let oks = [];
+            let errs = [];
+
+            const rs = await Promise.all(results);
+
+            for (const r of rs) {
+                if (r.isOk()) oks.push(r.val);
+                else errs.push(r.unwrapErr());
+            }
+
+            return [oks, errs] as any;
+        },
+    });
+}
